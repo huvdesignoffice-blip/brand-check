@@ -24,3 +24,30 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* 印刷用スタイル */
+@media print {
+  /* ヘッダー・ナビゲーションを非表示 */
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* テーブルを非表示（レーダーチャートのみ印刷） */
+  table {
+    display: none !important;
+  }
+  
+  /* 改ページ調整 */
+  .print-break-before {
+    page-break-before: always;
+  }
+  
+  /* 背景色を印刷 */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
