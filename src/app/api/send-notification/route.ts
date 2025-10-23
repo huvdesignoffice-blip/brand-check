@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
 
     // 結果ページのURL
     const resultUrl = result_id 
-      ? `https://brand-check-a3bd.vercel.app/results/${result_id}` 
-      : 'https://brand-check-a3bd.vercel.app/admin';
+      ? `https://brand-check-a3bd.vercel.app/results/${result_id}`
+: 'https://brand-check-a3bd.vercel.app/admin';
 
     const { data, error } = await resend.emails.send({
       from: 'delivered@resend.dev',
