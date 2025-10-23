@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
             <p><strong>平均スコア:</strong> ${avg_score} / 5.0</p>
           </div>
           <div style="margin: 30px 0;">
-            <a href="https://brand-check.vercel.app/results/${result_id}"style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">結果を確認する</a>
+            <a href="https://brand-check-a3bd.vercel.app/results/${result_id}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">結果を確認する</a>
           </div>
           <p style="color: #64748b; font-size: 14px;">
             または、管理画面で詳細を確認してください。
