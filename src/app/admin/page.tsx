@@ -68,17 +68,7 @@ export default function AdminPage() {
   }
 
   const totalCount = results.length;
-  const avgScore = results.length > 0
-    ? (results.reduce((sum, r) => {
-        const scores = [
-          r.q1_market_understanding, r.q2_competitive_analysis, r.q3_self_analysis,
-          r.q4_value_proposition, r.q5_uniqueness, r.q6_product_service,
-          r.q7_communication, r.q8_inner_branding, r.q9_kpi_management,
-          r.q10_results, r.q11_ip_protection, r.q12_growth_intent
-        ];
-        return sum + scores.reduce((a, b) => a + b, 0) / 12;
-      }, 0) / results.length).toFixed(1)
-    : "0";
+
 
   const thisMonth = new Date();
   thisMonth.setDate(1);
@@ -87,23 +77,18 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-          <h3 className="text-sm text-blue-600 mb-2">Total Brands</h3>
-          <p className="text-4xl font-bold text-blue-700">{totalCount}</p>
-          <p className="text-sm text-blue-600 mt-2">{newThisMonth} new this month</p>
-        </div>
-        <div className="bg-green-50 rounded-xl border border-green-200 p-6">
-          <h3 className="text-sm text-green-600 mb-2">Active Reports</h3>
-          <p className="text-4xl font-bold text-green-700">{totalCount}</p>
-          <p className="text-sm text-green-600 mt-2">All completed</p>
-        </div>
-        <div className="bg-orange-50 rounded-xl border border-orange-200 p-6">
-          <h3 className="text-sm text-orange-600 mb-2">Avg Score</h3>
-          <p className="text-4xl font-bold text-orange-700">{avgScore}</p>
-          <p className="text-sm text-orange-600 mt-2">out of 5.0</p>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+  <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+    <h3 className="text-sm text-blue-600 mb-2">Total Brands</h3>
+    <p className="text-4xl font-bold text-blue-700">{totalCount}</p>
+    <p className="text-sm text-blue-600 mt-2">{newThisMonth} new this month</p>
+  </div>
+  <div className="bg-green-50 rounded-xl border border-green-200 p-6">
+    <h3 className="text-sm text-green-600 mb-2">Active Reports</h3>
+    <p className="text-4xl font-bold text-green-700">{totalCount}</p>
+    <p className="text-sm text-green-600 mt-2">All completed</p>
+  </div>
+</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
