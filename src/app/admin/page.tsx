@@ -88,23 +88,20 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b border-gray-200">
-  <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-    <h1 className="text-2xl font-bold text-gray-900">Brand Check Admin</h1>
-    <div className="flex items-center gap-4">
-      <span className="text-sm text-gray-600">{session.user?.email}</span>
-      <button onClick={() => router.push('/api/auth/signout')} className="text-sm bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Sign out</button>
-    </div>
-  </div>
-</header>
-
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Brand Check Admin</h1>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">{session.user?.email}</span>
+              <button onClick={() => router.push('/api/auth/signout')} className="text-sm bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Sign out</button>
+            </div>
+          </div>
           <div className="flex space-x-8">
-            <a href="/admin" className="border-b-2 border-blue-600 text-blue-600 px-3 py-4 text-sm font-medium">Dashboard</a>
-            <a href="/admin/brand-check" className="border-b-2 border-transparent text-gray-600 hover:text-gray-900 px-3 py-4 text-sm font-medium">Brand Check</a>
+            <a href="/admin" className="border-b-2 border-blue-600 text-blue-600 pb-4 text-sm font-medium">Dashboard</a>
+            <a href="/admin/brand-check" className="border-b-2 border-transparent text-gray-600 hover:text-gray-900 pb-4 text-sm font-medium">Brand Check</a>
           </div>
         </div>
-      </nav>
+      </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -177,14 +174,20 @@ export default function AdminPage() {
               <tbody>
                 {results.slice(0, 10).map((result) => {
                   const scores = [result.q1_market_understanding, result.q2_competitive_analysis, result.q3_self_analysis, result.q4_value_proposition, result.q5_uniqueness, result.q6_product_service, result.q7_communication, result.q8_inner_branding, result.q9_kpi_management, result.q10_results, result.q11_ip_protection, result.q12_growth_intent];
-                  const avg = (scores.reduce((a, b) => a + b, 0) / 12).toFixed(0);
+                  const avg = (scores.reduce((a, b) => a + b, 0) / 12).toFixed(1);
                   return (
                     <tr key={result.id} className="border-b border-gray-100">
-                      <td className="py-3">{result.company_name}</td>
-                      <td className="py-3">{result.respondent_name}</td>
-                      <td className="py-3">{avg}</td>
-                      <td className="py-3"><span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">完了</span></td>
-                      <td className="py-3">{new Date(result.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 text-gray-900">{result.company_name}</td>
+                      <td className="py-3 text-gray-600">{result.respondent_name}</td>
+                      <td className="py-3">
+                        <span className={`px-2 py-1 rounded text-xs ${Number(avg) >= 4 ? 'bg-green-100 text-green-700' : Number(avg) >= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                          {avg}/5
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-700">Complete</span>
+                      </td>
+                      <td className="py-3 text-gray-600">{new Date(result.created_at).toLocaleDateString()}</td>
                     </tr>
                   );
                 })}
