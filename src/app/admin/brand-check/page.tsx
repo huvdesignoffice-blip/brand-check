@@ -13,6 +13,9 @@ type Assessment = {
   avg_score: number | null;
 };
 
+type SortField = "created_at" | "company_name" | "avg_score";
+type SortDirection = "asc" | "desc";
+
 export default function BrandCheckAdminPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
@@ -25,6 +28,9 @@ export default function BrandCheckAdminPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -32,8 +38,8 @@ export default function BrandCheckAdminPage() {
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [assessments, companyFilter, industryFilter, phaseFilter, startDate, endDate]);
+    applyFiltersAndSort();
+  }, [assessments, companyFilter, industryFilter, phaseFilter, startDate, endDate, sortField, sortDirection]);
 
   async function fetchAssessments() {
     try {
@@ -41,8 +47,8 @@ export default function BrandCheckAdminPage() {
       setError(null);
 
       const { data, error } = await supabase
-  .from("survey_results")
-  .select("*")
+        .from("survey_results")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -56,7 +62,7 @@ export default function BrandCheckAdminPage() {
     }
   }
 
-  function applyFilters() {
+  function applyFiltersAndSort() {
     let filtered = [...assessments];
 
     if (companyFilter) {
@@ -88,6 +94,29 @@ export default function BrandCheckAdminPage() {
       );
     }
 
+    // ソート
+    filtered.sort((a, b) => {
+      let aVal: any = a[sortField];
+      let bVal: any = b[sortField];
+
+      if (sortField === "created_at") {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else if (sortField === "avg_score") {
+        aVal = aVal || 0;
+        bVal = bVal || 0;
+      } else {
+        aVal = aVal || "";
+        bVal = bVal || "";
+      }
+
+      if (sortDirection === "asc") {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
     setFilteredAssessments(filtered);
   }
 
@@ -97,6 +126,54 @@ export default function BrandCheckAdminPage() {
     setPhaseFilter("");
     setStartDate("");
     setEndDate("");
+  }
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  }
+
+  function exportToCSV() {
+    const headers = [
+      "作成日時",
+      "会社名",
+      "回答者名",
+      "業界",
+      "ビジネスフェーズ",
+      "平均スコア"
+    ];
+
+    const rows = filteredAssessments.map((a) => [
+      new Date(a.created_at).toLocaleString("ja-JP"),
+      a.company_name || "-",
+      a.respondent_name || "-",
+      a.industry || "-",
+      a.business_phase || "-",
+      (a.avg_score || 0).toFixed(1)
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${cell}"`).join(",")
+      )
+    ].join("\n");
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `brand-check-export-${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   if (loading) {
@@ -119,7 +196,16 @@ export default function BrandCheckAdminPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold mb-6">ブランドチェック管理画面</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">ブランドチェック管理画面</h1>
+            <button
+              onClick={exportToCSV}
+              disabled={filteredAssessments.length === 0}
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition-colors"
+            >
+              CSVエクスポート ({filteredAssessments.length}件)
+            </button>
+          </div>
 
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <h2 className="text-lg font-semibold mb-4">フィルター</h2>
@@ -227,12 +313,42 @@ export default function BrandCheckAdminPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="p-3 text-left border">作成日時</th>
-                  <th className="p-3 text-left border">会社名</th>
+                  <th className="p-3 text-left border">
+                    <button
+                      onClick={() => handleSort("created_at")}
+                      className="flex items-center gap-1 hover:text-blue-600"
+                    >
+                      作成日時
+                      {sortField === "created_at" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </button>
+                  </th>
+                  <th className="p-3 text-left border">
+                    <button
+                      onClick={() => handleSort("company_name")}
+                      className="flex items-center gap-1 hover:text-blue-600"
+                    >
+                      会社名
+                      {sortField === "company_name" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </button>
+                  </th>
                   <th className="p-3 text-left border">回答者名</th>
                   <th className="p-3 text-left border">業界</th>
                   <th className="p-3 text-left border">ビジネスフェーズ</th>
-                  <th className="p-3 text-left border">平均スコア</th>
+                  <th className="p-3 text-left border">
+                    <button
+                      onClick={() => handleSort("avg_score")}
+                      className="flex items-center gap-1 hover:text-blue-600"
+                    >
+                      平均スコア
+                      {sortField === "avg_score" && (
+                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </button>
+                  </th>
                   <th className="p-3 text-left border">詳細</th>
                 </tr>
               </thead>
@@ -263,12 +379,11 @@ export default function BrandCheckAdminPage() {
                         {(assessment.avg_score || 0).toFixed(1)}
                       </td>
                       <td className="p-3 border">
-                        <a
-                          href={`/results/${assessment.id}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          詳細
-                        </a>
+                        <a                            href={`/results/${assessment.id}`}
+  className="text-blue-600 hover:underline"
+>
+  詳細
+</a>
                       </td>
                     </tr>
                   ))
