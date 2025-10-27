@@ -41,8 +41,8 @@ export default function BrandCheckAdminPage() {
       setError(null);
 
       const { data, error } = await supabase
-        .from("brand_assessments")
-        .select("*")
+  .from("survey_results")
+  .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
