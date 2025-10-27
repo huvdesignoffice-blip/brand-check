@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Request body:', body);
     
-    const { company_name, respondent_name, respondent_email, avg_score, business_phase, result_id } = body;
+    const { company_name, respondent_name, respondent_email, avg_score, business_phase, industry, result_id } = body;
 
     if (!process.env.RESEND_API_KEY) {
       console.error('RESEND_API_KEY is not set');
@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
           <h2 style="color: #0f172a;">新しいブランドチェック回答が届きました</h2>
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>企業名:</strong> ${company_name}</p>
-            <p><strong>回答者:</strong> ${respondent_name}</p>
-            <p><strong>メール:</strong> ${respondent_email || '未入力'}</p>
-            <p><strong>事業フェーズ:</strong> ${business_phase}</p>
-            <p><strong>平均スコア:</strong> ${avg_score} / 5.0</p>
+<p><strong>回答者:</strong> ${respondent_name}</p>
+<p><strong>メール:</strong> ${respondent_email || '未入力'}</p>
+<p><strong>業種:</strong> ${industry || '未入力'}</p>
+<p><strong>事業フェーズ:</strong> ${business_phase}</p>
+<p><strong>平均スコア:</strong> ${avg_score} / 5.0</p>
           </div>
           <div style="margin: 30px 0;">
             <a href="${resultUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;">結果を確認する</a>

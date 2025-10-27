@@ -3,7 +3,96 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-
+const INDUSTRIES = [
+  // IT・テクノロジー
+  "ソフトウェア開発",
+  "SaaS・クラウドサービス",
+  "Web制作・デザイン",
+  "システムインテグレーション",
+  "ITコンサルティング",
+  "セキュリティ",
+  
+  // 製造業
+  "食品製造",
+  "繊維・アパレル製造",
+  "化学・医薬品製造",
+  "金属・機械製造",
+  "電子部品・デバイス製造",
+  "自動車・輸送機器製造",
+  
+  // 小売・EC
+  "百貨店・総合小売",
+  "専門小売（食品）",
+  "専門小売（アパレル）",
+  "専門小売（家電・雑貨）",
+  "EC・オンライン販売",
+  "卸売",
+  
+  // 飲食・宿泊
+  "飲食店（レストラン）",
+  "カフェ・喫茶店",
+  "居酒屋・バー",
+  "ホテル・旅館",
+  "民泊",
+  "観光・レジャー施設",
+  
+  // 建設・不動産
+  "建設・土木",
+  "建築設計",
+  "不動産売買・仲介",
+  "不動産管理",
+  "リフォーム・リノベーション",
+  
+  // 医療・福祉
+  "病院・クリニック",
+  "歯科医院",
+  "介護・福祉施設",
+  "薬局・ドラッグストア",
+  "整体・鍼灸",
+  
+  // 教育
+  "学習塾・予備校",
+  "語学教室",
+  "専門学校・各種スクール",
+  "企業研修",
+  "オンライン教育",
+  
+  // 金融・保険
+  "銀行・信用金庫",
+  "証券",
+  "保険",
+  "ファイナンス",
+  
+  // 専門サービス
+  "経営コンサルティング",
+  "マーケティング・PR",
+  "広告代理店",
+  "デザイン事務所",
+  "法律事務所",
+  "会計・税理士事務所",
+  "人材紹介・派遣",
+  
+  // メディア・エンタメ
+  "出版・印刷",
+  "放送・映像制作",
+  "イベント企画・運営",
+  "芸能・音楽",
+  "ゲーム制作",
+  
+  // 物流・インフラ
+  "運輸・配送",
+  "倉庫・物流",
+  "エネルギー",
+  "通信",
+  
+  // その他
+  "農業",
+  "漁業",
+  "美容・理容",
+  "クリーニング",
+  "その他サービス",
+  "その他",
+];
 const QUESTIONS = [
   { id: "q1", label: "市場理解", question: "自社の「理想的な顧客像（ターゲット）」が明確で、社内でも共有されている。", trend: "顧客理解・ターゲティング力" },
   { id: "q2", label: "競合分析", question: "主な競合と自社の違いを、言語化して説明できる。", trend: "差別化軸・競争理解" },
@@ -28,13 +117,14 @@ export default function SurveyPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    companyName: "",
-    respondentName: "",
-    respondentEmail: "",
-    memo: "",
-    businessPhase: "",
-    scores: {} as Record<string, number>,
-  });
+  companyName: "",
+  respondentName: "",
+  respondentEmail: "",
+  memo: "",
+  businessPhase: "",
+  industry: "", // ← 追加
+  scores: {} as Record<string, number>,
+});
 
   const handleMetaSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,27 +147,28 @@ export default function SurveyPage() {
 
       // Supabaseにデータを保存（IDを取得するために.select()を追加）
       const { data: insertData, error: insertError } = await supabase
-        .from('survey_results')
-        .insert({
-          company_name: formData.companyName,
-          respondent_name: formData.respondentName,
-          respondent_email: formData.respondentEmail,
-          memo: formData.memo,
-          business_phase: formData.businessPhase,
-          q1_market_understanding: formData.scores.q1 || 1,
-          q2_competitive_analysis: formData.scores.q2 || 1,
-          q3_self_analysis: formData.scores.q3 || 1,
-          q4_value_proposition: formData.scores.q4 || 1,
-          q5_uniqueness: formData.scores.q5 || 1,
-          q6_product_service: formData.scores.q6 || 1,
-          q7_communication: formData.scores.q7 || 1,
-          q8_inner_branding: formData.scores.q8 || 1,
-          q9_kpi_management: formData.scores.q9 || 1,
-          q10_results: formData.scores.q10 || 1,
-          q11_ip_protection: formData.scores.q11 || 1,
-          q12_growth_intent: formData.scores.q12 || 1,
-        })
-        .select();
+  .from('survey_results')
+  .insert({
+    company_name: formData.companyName,
+    respondent_name: formData.respondentName,
+    respondent_email: formData.respondentEmail,
+    memo: formData.memo,
+    business_phase: formData.businessPhase,
+    industry: formData.industry, // ← 追加
+    q1_market_understanding: formData.scores.q1 || 1,
+    q2_competitive_analysis: formData.scores.q2 || 1,
+    q3_self_analysis: formData.scores.q3 || 1,
+    q4_value_proposition: formData.scores.q4 || 1,
+    q5_uniqueness: formData.scores.q5 || 1,
+    q6_product_service: formData.scores.q6 || 1,
+    q7_communication: formData.scores.q7 || 1,
+    q8_inner_branding: formData.scores.q8 || 1,
+    q9_kpi_management: formData.scores.q9 || 1,
+    q10_results: formData.scores.q10 || 1,
+    q11_ip_protection: formData.scores.q11 || 1,
+    q12_growth_intent: formData.scores.q12 || 1,
+  })
+  .select();
 
       if (insertError) {
         console.error('Insert error:', insertError);
@@ -95,27 +186,28 @@ export default function SurveyPage() {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    company_name: formData.companyName,
-    respondent_name: formData.respondentName,
-    respondent_email: formData.respondentEmail, // ← 追加
-    avg_score: avgScore.toFixed(1),
-    business_phase: formData.businessPhase,
-    result_id: resultId,
-    scores: { // ← 追加
-      '市場理解': formData.scores.q1 || 1,
-      '競合分析': formData.scores.q2 || 1,
-      '自社分析': formData.scores.q3 || 1,
-      '価値提案': formData.scores.q4 || 1,
-      '独自性': formData.scores.q5 || 1,
-      '商品・サービス': formData.scores.q6 || 1,
-      'コミュニケーション': formData.scores.q7 || 1,
-      'インナーブランディング': formData.scores.q8 || 1,
-      'KPI運用': formData.scores.q9 || 1,
-      '成果実感': formData.scores.q10 || 1,
-      '知的保護': formData.scores.q11 || 1,
-      '今後の方向性': formData.scores.q12 || 1,
-    },
-  }),
+  company_name: formData.companyName,
+  respondent_name: formData.respondentName,
+  respondent_email: formData.respondentEmail,
+  avg_score: avgScore.toFixed(1),
+  business_phase: formData.businessPhase,
+  industry: formData.industry, // ← 追加
+  result_id: resultId,
+  scores: {
+    '市場理解': formData.scores.q1 || 1,
+    '競合分析': formData.scores.q2 || 1,
+    '自社分析': formData.scores.q3 || 1,
+    '価値提案': formData.scores.q4 || 1,
+    '独自性': formData.scores.q5 || 1,
+    '商品・サービス': formData.scores.q6 || 1,
+    'コミュニケーション': formData.scores.q7 || 1,
+    'インナーブランディング': formData.scores.q8 || 1,
+    'KPI運用': formData.scores.q9 || 1,
+    '成果実感': formData.scores.q10 || 1,
+    '知的保護': formData.scores.q11 || 1,
+    '今後の方向性': formData.scores.q12 || 1,
+  },
+}),
 });
 
         if (!notificationResponse.ok) {
@@ -164,9 +256,30 @@ export default function SurveyPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
-                <input type="email" value={formData.respondentEmail} onChange={(e) => setFormData((prev) => ({ ...prev, respondentEmail: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="例：example@company.com" />
-              </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+  <input 
+    type="email" 
+    value={formData.respondentEmail} 
+    onChange={(e) => setFormData((prev) => ({ ...prev, respondentEmail: e.target.value }))} 
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+    placeholder="例：example@company.com" 
+  />
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">業種 *</label>
+  <select
+    value={formData.industry}
+    onChange={(e) => setFormData((prev) => ({ ...prev, industry: e.target.value }))}
+    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    required
+  >
+    <option value="">選択してください</option>
+    {INDUSTRIES.map((industry) => (
+      <option key={industry} value={industry}>{industry}</option>
+    ))}
+  </select>
+</div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">事業フェーズ *</label>
