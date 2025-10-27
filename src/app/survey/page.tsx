@@ -92,16 +92,31 @@ export default function SurveyPage() {
       try {
         console.log('Sending email notification...');
         const notificationResponse = await fetch('/api/send-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: formData.companyName,
-            respondent_name: formData.respondentName,
-            avg_score: avgScore.toFixed(1),
-            business_phase: formData.businessPhase,
-            result_id: resultId,
-          }),
-        });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    company_name: formData.companyName,
+    respondent_name: formData.respondentName,
+    respondent_email: formData.respondentEmail, // ← 追加
+    avg_score: avgScore.toFixed(1),
+    business_phase: formData.businessPhase,
+    result_id: resultId,
+    scores: { // ← 追加
+      '市場理解': formData.scores.q1 || 1,
+      '競合分析': formData.scores.q2 || 1,
+      '自社分析': formData.scores.q3 || 1,
+      '価値提案': formData.scores.q4 || 1,
+      '独自性': formData.scores.q5 || 1,
+      '商品・サービス': formData.scores.q6 || 1,
+      'コミュニケーション': formData.scores.q7 || 1,
+      'インナーブランディング': formData.scores.q8 || 1,
+      'KPI運用': formData.scores.q9 || 1,
+      '成果実感': formData.scores.q10 || 1,
+      '知的保護': formData.scores.q11 || 1,
+      '今後の方向性': formData.scores.q12 || 1,
+    },
+  }),
+});
 
         if (!notificationResponse.ok) {
           console.error('Email notification failed:', await notificationResponse.text());
