@@ -11,6 +11,7 @@ type Assessment = {
   respondent_name: string | null;
   respondent_email: string | null;
   business_phase: string | null;
+  industry: string | null; // ← 追加
   q1_market_understanding: number | null;
   q2_competitive_analysis: number | null;
   q3_self_analysis: number | null;
@@ -43,8 +44,14 @@ const CHART_CATEGORIES = [
 
 export default function BrandCheckPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  // フィルター・ソート状態
+  const [filterIndustry, setFilterIndustry] = useState<string>("all");
+  const [filterPhase, setFilterPhase] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date-desc");
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -75,6 +82,7 @@ export default function BrandCheckPage() {
           return { ...item, avg_score: avg };
         });
         setAssessments(assessmentsWithAvg);
+        setFilteredAssessments(assessmentsWithAvg);
       }
       setLoading(false);
     };
@@ -82,9 +90,53 @@ export default function BrandCheckPage() {
     fetchAssessments();
   }, []);
 
+  // フィルター・ソート処理
+  useEffect(() => {
+    let filtered = [...assessments];
+
+    // 業種フィルター
+    if (filterIndustry !== "all") {
+      filtered = filtered.filter((a) => a.industry === filterIndustry);
+    }
+
+    // 事業フェーズフィルター
+    if (filterPhase !== "all") {
+      filtered = filtered.filter((a) => a.business_phase === filterPhase);
+    }
+
+    // ソート
+    switch (sortBy) {
+      case "date-desc":
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case "date-asc":
+        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case "score-desc":
+        filtered.sort((a, b) => (b.avg_score || 0) - (a.avg_score || 0));
+        break;
+      case "score-asc":
+        filtered.sort((a, b) => (a.avg_score || 0) - (b.avg_score || 0));
+        break;
+    }
+
+    setFilteredAssessments(filtered);
+  }, [assessments, filterIndustry, filterPhase, sortBy]);
+
+  // 業種一覧を取得
+  const industries = Array.from(new Set(assessments.map((a) => a.industry).filter(Boolean)));
+  const phases = Array.from(new Set(assessments.map((a) => a.business_phase).filter(Boolean)));
+
+  // 業種別平均スコアを計算
+  const industryStats = industries.map((industry) => {
+    const industryData = assessments.filter((a) => a.industry === industry);
+    const avgScore = industryData.reduce((sum, a) => sum + (a.avg_score || 0), 0) / industryData.length;
+    return { industry, count: industryData.length, avgScore: avgScore.toFixed(2) };
+  }).sort((a, b) => b.count - a.count);
+
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(assessments.map((a) => a.id));
+      setSelectedIds(filteredAssessments.map((a) => a.id));
     } else {
       setSelectedIds([]);
     }
@@ -116,14 +168,14 @@ export default function BrandCheckPage() {
   };
 
   const handleExportCSV = () => {
-    const selectedData = assessments.filter((a) => selectedIds.includes(a.id));
+    const selectedData = filteredAssessments.filter((a) => selectedIds.includes(a.id));
     if (selectedData.length === 0) {
       alert("エクスポートするデータを選択してください");
       return;
     }
 
     const headers = [
-      "企業名", "回答者", "事業フェーズ", "平均スコア", "日時",
+      "企業名", "回答者", "業種", "事業フェーズ", "平均スコア", "日時",
       "市場理解", "競合分析", "自社分析", "価値提案", "独自性", "商品サービス",
       "コミュニケーション", "インナーブランディング", "KPI管理", "成果", "知財保護", "成長意欲"
     ];
@@ -131,6 +183,7 @@ export default function BrandCheckPage() {
     const rows = selectedData.map((a) => [
       a.company_name || "",
       a.respondent_name || "",
+      a.industry || "",
       a.business_phase || "",
       (a.avg_score || 0).toFixed(1),
       new Date(a.created_at).toLocaleString(),
@@ -157,7 +210,7 @@ export default function BrandCheckPage() {
     link.click();
   };
 
-  const selectedAssessments = assessments.filter((a) => selectedIds.includes(a.id));
+  const selectedAssessments = filteredAssessments.filter((a) => selectedIds.includes(a.id));
   const chartData = CHART_CATEGORIES.map((cat) => {
     const values = selectedAssessments.map((a) => (a as any)[cat.key] || 0);
     const avg = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
@@ -176,6 +229,84 @@ export default function BrandCheckPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">ブランドチェック結果</h1>
+
+        {/* 業種別統計 */}
+        {industryStats.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">業種別分析</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left">業種</th>
+                    <th className="p-3 text-center">件数</th>
+                    <th className="p-3 text-center">平均スコア</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {industryStats.map((stat) => (
+                    <tr key={stat.industry} className="border-b">
+                      <td className="p-3">{stat.industry}</td>
+                      <td className="p-3 text-center">{stat.count}件</td>
+                      <td className="p-3 text-center">
+                        <span className="font-semibold text-blue-600">{stat.avgScore}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* フィルター・ソート */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">フィルター・ソート</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">業種</label>
+              <select
+                value={filterIndustry}
+                onChange={(e) => setFilterIndustry(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="all">すべて</option>
+                {industries.map((industry) => (
+                  <option key={industry} value={industry}>{industry}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">事業フェーズ</label>
+              <select
+                value={filterPhase}
+                onChange={(e) => setFilterPhase(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="all">すべて</option>
+                {phases.map((phase) => (
+                  <option key={phase} value={phase}>{phase}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="date-desc">日付 (新しい順)</option>
+                <option value="date-asc">日付 (古い順)</option>
+                <option value="score-desc">スコア (高い順)</option>
+                <option value="score-asc">スコア (低い順)</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-600">
+            表示中: {filteredAssessments.length}件 / 全{assessments.length}件
+          </div>
+        </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
@@ -221,27 +352,28 @@ export default function BrandCheckPage() {
                   <th className="p-3">
                     <input
                       type="checkbox"
-                      checked={selectedIds.length === assessments.length && assessments.length > 0}
+                      checked={selectedIds.length === filteredAssessments.length && filteredAssessments.length > 0}
                       onChange={handleSelectAll}
                     />
                   </th>
                   <th className="p-3">日時</th>
                   <th className="p-3">企業名</th>
                   <th className="p-3">回答者</th>
+                  <th className="p-3">業種</th>
                   <th className="p-3">事業フェーズ</th>
                   <th className="p-3">平均スコア</th>
                   <th className="p-3">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {assessments.length === 0 ? (
+                {filteredAssessments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-gray-500">
-                      まだデータがありません
+                    <td colSpan={8} className="p-8 text-center text-gray-500">
+                      データがありません
                     </td>
                   </tr>
                 ) : (
-                  assessments.map((assessment) => (
+                  filteredAssessments.map((assessment) => (
                     <tr key={assessment.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         <input
@@ -253,15 +385,15 @@ export default function BrandCheckPage() {
                       <td className="p-3">{new Date(assessment.created_at).toLocaleString()}</td>
                       <td className="p-3">{assessment.company_name || "-"}</td>
                       <td className="p-3">{assessment.respondent_name || "-"}</td>
+                      <td className="p-3">{assessment.industry || "-"}</td>
                       <td className="p-3">{assessment.business_phase || "-"}</td>
                       <td className="p-3">{(assessment.avg_score || 0).toFixed(1)}</td>
                       <td className="p-3">
-                        <a
+                        
                           href={`/results/${assessment.id}`}
                           className="text-blue-600 hover:underline"
                         >
                           詳細
-
                         </a>
                       </td>
                     </tr>
