@@ -12,6 +12,7 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
+import { analyzeScores, AnalysisResult } from "@/lib/analysis";
 
 type AssessmentData = {
   id: string;
@@ -56,6 +57,7 @@ export default function ResultsPage() {
   const params = useParams();
   const id = params?.id as string;
   const [assessment, setAssessment] = useState<AssessmentData | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +83,30 @@ export default function ResultsPage() {
       if (error) throw error;
 
       setAssessment(data);
+
+      // AI分析を実行
+      const scores = [
+        data.q1_market_understanding,
+        data.q2_competitive_analysis,
+        data.q3_self_analysis,
+        data.q4_value_proposition,
+        data.q5_uniqueness,
+        data.q6_product_service,
+        data.q7_communication,
+        data.q8_inner_branding,
+        data.q9_kpi_management,
+        data.q10_results,
+        data.q11_ip_protection,
+        data.q12_growth_intent,
+      ];
+
+      const analysisResult = analyzeScores(
+        scores,
+        data.business_phase || "",
+        data.memo || undefined
+      );
+
+      setAnalysis(analysisResult);
     } catch (err) {
       console.error("Error fetching assessment:", err);
       setError("データの取得に失敗しました");
@@ -101,7 +127,7 @@ export default function ResultsPage() {
     );
   }
 
-  if (error || !assessment) {
+  if (error || !assessment || !analysis) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl text-red-600">
@@ -146,7 +172,7 @@ export default function ResultsPage() {
               </button>
               
                 href="/admin/brand-check"
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
               <a>
                 管理画面に戻る
               </a>
@@ -248,135 +274,186 @@ export default function ResultsPage() {
               </div>
             </div>
 
-            {/* 分析レポート */}
-            <div className="mb-8">
-              <h3 className="text-xl font-bold mb-4">分析レポート</h3>
-              
-              {/* 弱点アラート */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-red-600 mb-3 flex items-center gap-2">
-                  <span>⚠️</span>
-                  <span>改善が必要な項目</span>
-                </h4>
-                <div className="space-y-2">
-                  {categories
-                    .filter((cat) => {
-                      const score = assessment[cat.key as keyof AssessmentData] as number;
-                      return score < 3;
-                    })
-                    .map((cat) => {
-                      const score = assessment[cat.key as keyof AssessmentData] as number;
-                      return (
-                        <div key={cat.key} className="p-3 bg-red-50 border-l-4 border-red-500 rounded">
-                          <div className="font-medium text-red-800">
-                            {cat.label}：スコア {score.toFixed(1)}
-                          </div>
-                          <div className="text-sm text-red-600 mt-1">
-                            {getImprovement(cat.key)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {categories.every((cat) => {
-                    const score = assessment[cat.key as keyof AssessmentData] as number;
-                    return score >= 3;
-                  }) && (
-                    <div className="p-3 bg-green-50 border-l-4 border-green-500 rounded">
-                      <div className="text-green-800">
-                        すべての項目で基準スコア（3.0以上）を達成しています！
-                      </div>
-                    </div>
-                  )}
+            {/* AI診断レポート - 完全版 */}
+            <div className="mt-8 bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-xl shadow-lg">
+                  AI
                 </div>
-              </div>
-
-              {/* 強みの項目 */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-green-600 mb-3 flex items-center gap-2">
-                  <span>✨</span>
-                  <span>強みの項目</span>
-                </h4>
-                <div className="space-y-2">
-                  {categories
-                    .filter((cat) => {
-                      const score = assessment[cat.key as keyof AssessmentData] as number;
-                      return score >= 4;
-                    })
-                    .map((cat) => {
-                      const score = assessment[cat.key as keyof AssessmentData] as number;
-                      return (
-                        <div key={cat.key} className="p-3 bg-green-50 border-l-4 border-green-500 rounded">
-                          <div className="font-medium text-green-800">
-                            {cat.label}：スコア {score.toFixed(1)}
-                          </div>
-                          <div className="text-sm text-green-600 mt-1">
-                            この強みを活かして、さらなる成長を目指しましょう。
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {categories.every((cat) => {
-                    const score = assessment[cat.key as keyof AssessmentData] as number;
-                    return score < 4;
-                  }) && (
-                    <div className="p-3 bg-gray-50 border-l-4 border-gray-300 rounded">
-                      <div className="text-gray-600">
-                        スコア4.0以上の項目はありません。全体的な底上げを目指しましょう。
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 優先順位 */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-blue-600 mb-3 flex items-center gap-2">
-                  <span>📊</span>
-                  <span>優先的に取り組むべき項目（スコアの低い順）</span>
-                </h4>
-                <div className="space-y-2">
-                  {[...categories]
-                    .sort((a, b) => {
-                      const scoreA = assessment[a.key as keyof AssessmentData] as number;
-                      const scoreB = assessment[b.key as keyof AssessmentData] as number;
-                      return scoreA - scoreB;
-                    })
-                    .slice(0, 5)
-                    .map((cat, index) => {
-                      const score = assessment[cat.key as keyof AssessmentData] as number;
-                      return (
-                        <div key={cat.key} className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded flex items-start gap-3">
-                          <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-blue-800">
-                              {cat.label}：スコア {score.toFixed(1)}
-                            </div>
-                            <div className="text-sm text-blue-600 mt-1">
-                              {getActionPlan(cat.key)}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
+                <h2 className="text-2xl font-bold text-gray-900">診断レポート</h2>
               </div>
 
               {/* 総合評価 */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-800 mb-2">総合評価</h4>
-                <div className="text-sm text-gray-700">
-                  {assessment.avg_score >= 4.0 && (
-                    <p>優れたブランド戦略が構築されています。現在の強みを維持しながら、さらなる成長を目指しましょう。</p>
-                  )}
-                  {assessment.avg_score >= 3.0 && assessment.avg_score < 4.0 && (
-                    <p>基本的なブランド戦略は整っていますが、改善の余地があります。優先項目に集中して取り組むことで、大きな成果が期待できます。</p>
-                  )}
-                  {assessment.avg_score < 3.0 && (
-                    <p>ブランド戦略の強化が必要です。まずは優先順位の高い項目から着手し、段階的に改善を進めましょう。専門家のサポートを検討することをお勧めします。</p>
-                  )}
+              <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-gray-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl font-bold text-purple-600">■ 総合評価</span>
+                  <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-2 rounded-full font-bold text-lg shadow">
+                    {analysis.overallRating}
+                  </span>
                 </div>
+                <p className="text-gray-700 leading-relaxed text-base">{analysis.overallComment}</p>
+              </div>
+
+              {/* リスクアラート */}
+              {analysis.riskAlerts && analysis.riskAlerts.length > 0 && (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🚨</span> リスクアラート
+                  </h3>
+                  <ul className="space-y-3">
+                    {analysis.riskAlerts.map((alert: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-red-200">
+                        <span className="text-red-800 font-medium">{alert}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 矛盾検知 */}
+              {analysis.contradictions && analysis.contradictions.length > 0 && (
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">⚠️</span> 矛盾検知（{analysis.contradictions.length}件）
+                  </h3>
+                  <p className="text-sm text-orange-800 mb-4 font-medium">
+                    スコア間で論理的な矛盾が検出されました。順序立てて改善することが重要です。
+                  </p>
+                  <ul className="space-y-3">
+                    {analysis.contradictions.map((contradiction: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-orange-200">
+                        <span className="text-gray-800">{contradiction}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 失敗パターン検知 */}
+              {analysis.failurePatterns && analysis.failurePatterns.length > 0 && (
+                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">❌</span> よくある失敗パターンを検知
+                  </h3>
+                  <ul className="space-y-3">
+                    {analysis.failurePatterns.map((pattern: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-yellow-200">
+                        <span className="text-gray-800">{pattern}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 記述内容との照合分析 */}
+              {analysis.memoAnalysis && analysis.memoAnalysis.length > 0 && (
+                <div className="bg-cyan-50 border-2 border-cyan-300 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-cyan-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🔍</span> 記述内容との照合分析
+                  </h3>
+                  <p className="text-sm text-cyan-800 mb-4 font-medium">
+                    記述された課題・展望とスコアを照合し、整合性を分析しました。
+                  </p>
+                  <ul className="space-y-3">
+                    {analysis.memoAnalysis.map((item: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-cyan-200">
+                        <span className="text-gray-800">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 優先アクション */}
+              {analysis.priorityActions && analysis.priorityActions.length > 0 && (
+                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
+                  </h3>
+                  <ol className="space-y-3">
+                    {analysis.priorityActions.map((action: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
+                        <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span className="leading-relaxed font-medium text-gray-800">{action}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* 強み */}
+              <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-green-200">
+                <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">✓</span> 強み
+                </h3>
+                <ul className="space-y-2">
+                  {analysis.strengths.map((strength: string, i: number) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="text-green-500 text-xl mt-0.5">●</span>
+                      <span className="text-gray-700">{strength}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* 改善が必要な領域 */}
+              {analysis.weaknesses && analysis.weaknesses.length > 0 && (
+                <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-orange-200">
+                  <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">△</span> 改善が必要な領域
+                  </h3>
+                  <ul className="space-y-2">
+                    {analysis.weaknesses.map((weakness: string, i: number) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="text-orange-500 text-xl mt-0.5">●</span>
+                        <span className="text-gray-700">{weakness}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 成功への道筋 */}
+              {analysis.successPath && analysis.successPath.length > 0 && (
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-6 shadow-md">
+                  <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🎯</span> 成功への道筋
+                  </h3>
+                  <ul className="space-y-3">
+                    {analysis.successPath.map((path: string, i: number) => (
+                      <li key={i} className="bg-white rounded p-3 border border-green-200">
+                        <span className="text-gray-800 font-medium">{path}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 具体的な改善提案 */}
+              <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-blue-200">
+                <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">→</span> 具体的な改善提案
+                </h3>
+                <ol className="space-y-3">
+                  {analysis.recommendations.map((rec: string, i: number) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-gray-700">{rec}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* 事業フェーズ別アドバイス */}
+              <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-6 shadow-md border border-purple-300">
+                <h3 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">💡</span> {assessment.business_phase}フェーズのアドバイス
+                </h3>
+                <p className="text-gray-800 leading-relaxed font-medium">{analysis.phaseAdvice}</p>
               </div>
             </div>
 
@@ -400,42 +477,4 @@ export default function ResultsPage() {
       </div>
     </>
   );
-}
-
-// 改善提案を取得
-function getImprovement(key: string): string {
-  const improvements: Record<string, string> = {
-    q1_market_understanding: "市場調査を実施し、ターゲット顧客のニーズを深く理解しましょう。",
-    q2_competitive_analysis: "競合他社の戦略を分析し、自社の差別化ポイントを明確にしましょう。",
-    q3_self_analysis: "SWOT分析などを活用し、自社の強み・弱みを客観的に把握しましょう。",
-    q4_value_proposition: "顧客に提供する独自の価値を明確化し、わかりやすく伝えましょう。",
-    q5_uniqueness: "他社にはない独自性を強化し、ブランドの差別化を図りましょう。",
-    q6_product_service: "製品・サービスの品質を向上させ、顧客満足度を高めましょう。",
-    q7_communication: "一貫性のあるブランドメッセージを、適切なチャネルで発信しましょう。",
-    q8_inner_branding: "社員にブランド価値を浸透させ、全員がブランドアンバサダーになりましょう。",
-    q9_kpi_management: "ブランド関連のKPIを設定し、定期的に測定・改善しましょう。",
-    q10_results: "ブランド戦略の成果を可視化し、PDCAサイクルを回しましょう。",
-    q11_ip_protection: "商標登録など、知的財産権の保護を強化しましょう。",
-    q12_growth_intent: "長期的なブランド成長戦略を策定し、実行に移しましょう。",
-  };
-  return improvements[key] || "この項目の改善に取り組みましょう。";
-}
-
-// アクションプランを取得
-function getActionPlan(key: string): string {
-  const plans: Record<string, string> = {
-    q1_market_understanding: "顧客インタビューの実施、市場データの収集・分析",
-    q2_competitive_analysis: "競合調査レポートの作成、ポジショニングマップの作成",
-    q3_self_analysis: "内部リソース監査、強み・弱みの棚卸し",
-    q4_value_proposition: "バリュープロポジションキャンバスの作成",
-    q5_uniqueness: "USP（独自の売り）の明確化と強化",
-    q6_product_service: "顧客フィードバックの収集と改善実施",
-    q7_communication: "ブランドガイドラインの策定、統一メッセージの展開",
-    q8_inner_branding: "社内ワークショップの開催、ブランドブックの作成",
-    q9_kpi_management: "測定指標の設定、ダッシュボードの構築",
-    q10_results: "成果の定量化、レポーティング体制の確立",
-    q11_ip_protection: "商標登録申請、法的保護体制の構築",
-    q12_growth_intent: "3-5年のブランド戦略ロードマップの策定",
-  };
-  return plans[key] || "具体的なアクションプランを策定しましょう。";
 }
