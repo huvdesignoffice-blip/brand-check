@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import Image from "next/image";
 import {
   Radar,
   RadarChart,
@@ -126,6 +127,9 @@ export default function ResultsPage() {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
+          @page {
+            margin: 1cm;
+          }
         }
       `}</style>
 
@@ -141,22 +145,36 @@ export default function ResultsPage() {
               >
                 PDF印刷
               </button>
-              <a
+              
                 href="/admin/brand-check"
-  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
->
-  管理画面に戻る
-</a>
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+              <a>
+                管理画面に戻る
+              </a>
             </div>
           </div>
 
           {/* 印刷用レポート */}
           <div className="bg-white rounded-lg shadow-lg p-8">
-            {/* ヘッダー */}
+            {/* ロゴとヘッダー */}
             <div className="mb-8 border-b-2 border-gray-200 pb-6">
-              <h2 className="text-2xl font-bold mb-4 text-blue-600">
-                ブランドチェック診断レポート
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-blue-600">
+                    ブランドチェック診断レポート
+                  </h2>
+                </div>
+                <div className="flex-shrink-0">
+                  <Image
+                    src="/variation logo_1.png"
+                    alt="Company Logo"
+                    width={150}
+                    height={60}
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-semibold">作成日：</span>
