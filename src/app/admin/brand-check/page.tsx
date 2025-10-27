@@ -1,221 +1,103 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import { useEffect, useState } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Assessment = {
   id: string;
   created_at: string;
   company_name: string | null;
   respondent_name: string | null;
-  respondent_email: string | null;
+  industry: string | null;
   business_phase: string | null;
-  industry: string | null; // ← 追加
-  q1_market_understanding: number | null;
-  q2_competitive_analysis: number | null;
-  q3_self_analysis: number | null;
-  q4_value_proposition: number | null;
-  q5_uniqueness: number | null;
-  q6_product_service: number | null;
-  q7_communication: number | null;
-  q8_inner_branding: number | null;
-  q9_kpi_management: number | null;
-  q10_results: number | null;
-  q11_ip_protection: number | null;
-  q12_growth_intent: number | null;
   avg_score: number | null;
 };
 
-const CHART_CATEGORIES = [
-  { key: "q1_market_understanding", label: "市場理解" },
-  { key: "q2_competitive_analysis", label: "競合分析" },
-  { key: "q3_self_analysis", label: "自社分析" },
-  { key: "q4_value_proposition", label: "価値提案" },
-  { key: "q5_uniqueness", label: "独自性" },
-  { key: "q6_product_service", label: "商品サービス" },
-  { key: "q7_communication", label: "コミュニケーション" },
-  { key: "q8_inner_branding", label: "インナーブランディング" },
-  { key: "q9_kpi_management", label: "KPI管理" },
-  { key: "q10_results", label: "成果" },
-  { key: "q11_ip_protection", label: "知財保護" },
-  { key: "q12_growth_intent", label: "成長意欲" },
-];
-
-export default function BrandCheckPage() {
+export default function BrandCheckAdminPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  // フィルター・ソート状態
-  const [filterIndustry, setFilterIndustry] = useState<string>("all");
-  const [filterPhase, setFilterPhase] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("date-desc");
+  const [error, setError] = useState<string | null>(null);
+
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const [phaseFilter, setPhaseFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    const fetchAssessments = async () => {
-      const { data, error } = await supabase
-        .from("survey_results")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching assessments:", error);
-      } else {
-        const assessmentsWithAvg = (data || []).map((item) => {
-          const scores = [
-            item.q1_market_understanding,
-            item.q2_competitive_analysis,
-            item.q3_self_analysis,
-            item.q4_value_proposition,
-            item.q5_uniqueness,
-            item.q6_product_service,
-            item.q7_communication,
-            item.q8_inner_branding,
-            item.q9_kpi_management,
-            item.q10_results,
-            item.q11_ip_protection,
-            item.q12_growth_intent,
-          ];
-          const avg = scores.reduce((a, b) => (a || 0) + (b || 0), 0) / 12;
-          return { ...item, avg_score: avg };
-        });
-        setAssessments(assessmentsWithAvg);
-        setFilteredAssessments(assessmentsWithAvg);
-      }
-      setLoading(false);
-    };
-
     fetchAssessments();
   }, []);
 
-  // フィルター・ソート処理
   useEffect(() => {
+    applyFilters();
+  }, [assessments, companyFilter, industryFilter, phaseFilter, startDate, endDate]);
+
+  async function fetchAssessments() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from("brand_assessments")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setAssessments(data || []);
+    } catch (err) {
+      console.error("Error fetching assessments:", err);
+      setError("データの取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function applyFilters() {
     let filtered = [...assessments];
 
-    // 業種フィルター
-    if (filterIndustry !== "all") {
-      filtered = filtered.filter((a) => a.industry === filterIndustry);
+    if (companyFilter) {
+      filtered = filtered.filter((a) =>
+        a.company_name?.toLowerCase().includes(companyFilter.toLowerCase())
+      );
     }
 
-    // 事業フェーズフィルター
-    if (filterPhase !== "all") {
-      filtered = filtered.filter((a) => a.business_phase === filterPhase);
+    if (industryFilter) {
+      filtered = filtered.filter((a) =>
+        a.industry?.toLowerCase().includes(industryFilter.toLowerCase())
+      );
     }
 
-    // ソート
-    switch (sortBy) {
-      case "date-desc":
-        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case "date-asc":
-        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        break;
-      case "score-desc":
-        filtered.sort((a, b) => (b.avg_score || 0) - (a.avg_score || 0));
-        break;
-      case "score-asc":
-        filtered.sort((a, b) => (a.avg_score || 0) - (b.avg_score || 0));
-        break;
+    if (phaseFilter) {
+      filtered = filtered.filter((a) =>
+        a.business_phase?.toLowerCase().includes(phaseFilter.toLowerCase())
+      );
+    }
+
+    if (startDate) {
+      filtered = filtered.filter(
+        (a) => new Date(a.created_at) >= new Date(startDate)
+      );
+    }
+    if (endDate) {
+      filtered = filtered.filter(
+        (a) => new Date(a.created_at) <= new Date(endDate)
+      );
     }
 
     setFilteredAssessments(filtered);
-  }, [assessments, filterIndustry, filterPhase, sortBy]);
+  }
 
-  // 業種一覧を取得
-  const industries = Array.from(new Set(assessments.map((a) => a.industry).filter(Boolean)));
-  const phases = Array.from(new Set(assessments.map((a) => a.business_phase).filter(Boolean)));
-
-  // 業種別平均スコアを計算
-  const industryStats = industries.map((industry) => {
-    const industryData = assessments.filter((a) => a.industry === industry);
-    const avgScore = industryData.reduce((sum, a) => sum + (a.avg_score || 0), 0) / industryData.length;
-    return { industry, count: industryData.length, avgScore: avgScore.toFixed(2) };
-  }).sort((a, b) => b.count - a.count);
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(filteredAssessments.map((a) => a.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const handleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleDelete = async () => {
-    if (selectedIds.length === 0) return;
-    if (!confirm(`${selectedIds.length}件のデータを削除しますか？`)) return;
-
-    const { error } = await supabase
-      .from("survey_results")
-      .delete()
-      .in("id", selectedIds);
-
-    if (error) {
-      console.error("Delete error:", error);
-      alert("削除に失敗しました");
-    } else {
-      setAssessments((prev) => prev.filter((a) => !selectedIds.includes(a.id)));
-      setSelectedIds([]);
-      alert("削除しました");
-    }
-  };
-
-  const handleExportCSV = () => {
-    const selectedData = filteredAssessments.filter((a) => selectedIds.includes(a.id));
-    if (selectedData.length === 0) {
-      alert("エクスポートするデータを選択してください");
-      return;
-    }
-
-    const headers = [
-      "企業名", "回答者", "業種", "事業フェーズ", "平均スコア", "日時",
-      "市場理解", "競合分析", "自社分析", "価値提案", "独自性", "商品サービス",
-      "コミュニケーション", "インナーブランディング", "KPI管理", "成果", "知財保護", "成長意欲"
-    ];
-
-    const rows = selectedData.map((a) => [
-      a.company_name || "",
-      a.respondent_name || "",
-      a.industry || "",
-      a.business_phase || "",
-      (a.avg_score || 0).toFixed(1),
-      new Date(a.created_at).toLocaleString(),
-      a.q1_market_understanding || "",
-      a.q2_competitive_analysis || "",
-      a.q3_self_analysis || "",
-      a.q4_value_proposition || "",
-      a.q5_uniqueness || "",
-      a.q6_product_service || "",
-      a.q7_communication || "",
-      a.q8_inner_branding || "",
-      a.q9_kpi_management || "",
-      a.q10_results || "",
-      a.q11_ip_protection || "",
-      a.q12_growth_intent || "",
-    ]);
-
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `brand-check-${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-  };
-
-  const selectedAssessments = filteredAssessments.filter((a) => selectedIds.includes(a.id));
-  const chartData = CHART_CATEGORIES.map((cat) => {
-    const values = selectedAssessments.map((a) => (a as any)[cat.key] || 0);
-    const avg = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
-    return { category: cat.label, value: avg };
-  });
+  function resetFilters() {
+    setCompanyFilter("");
+    setIndustryFilter("");
+    setPhaseFilter("");
+    setStartDate("");
+    setEndDate("");
+  }
 
   if (loading) {
     return (
@@ -225,171 +107,163 @@ export default function BrandCheckPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-red-600">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">ブランドチェック結果</h1>
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h1 className="text-3xl font-bold mb-6">ブランドチェック管理画面</h1>
 
-        {/* 業種別統計 */}
-        {industryStats.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">業種別分析</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="p-3 text-left">業種</th>
-                    <th className="p-3 text-center">件数</th>
-                    <th className="p-3 text-center">平均スコア</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {industryStats.map((stat) => (
-                    <tr key={stat.industry} className="border-b">
-                      <td className="p-3">{stat.industry}</td>
-                      <td className="p-3 text-center">{stat.count}件</td>
-                      <td className="p-3 text-center">
-                        <span className="font-semibold text-blue-600">{stat.avgScore}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* フィルター・ソート */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">フィルター・ソート</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">業種</label>
-              <select
-                value={filterIndustry}
-                onChange={(e) => setFilterIndustry(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="all">すべて</option>
-                {industries.map((industry) => (
-                  <option key={industry} value={industry}>{industry}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">事業フェーズ</label>
-              <select
-                value={filterPhase}
-                onChange={(e) => setFilterPhase(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="all">すべて</option>
-                {phases.map((phase) => (
-                  <option key={phase} value={phase}>{phase}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="date-desc">日付 (新しい順)</option>
-                <option value="date-asc">日付 (古い順)</option>
-                <option value="score-desc">スコア (高い順)</option>
-                <option value="score-asc">スコア (低い順)</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            表示中: {filteredAssessments.length}件 / 全{assessments.length}件
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-gray-600">{selectedIds.length}件選択中</p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleDelete}
-                disabled={selectedIds.length === 0}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                削除
-              </button>
-              <button
-                onClick={handleExportCSV}
-                disabled={selectedIds.length === 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                CSVエクスポート
-              </button>
-            </div>
-          </div>
-
-          {selectedIds.length > 0 && (
-            <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-              <h2 className="text-lg font-semibold mb-4">選択データの平均スコア</h2>
-              <div className="flex justify-center">
-                <RadarChart width={500} height={400} data={chartData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" />
-                  <PolarRadiusAxis domain={[0, 5]} />
-                  <Radar dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.5} />
-                </RadarChart>
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h2 className="text-lg font-semibold mb-4">フィルター</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">会社名</label>
+                <input
+                  type="text"
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  placeholder="会社名で検索"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">業界</label>
+                <input
+                  type="text"
+                  value={industryFilter}
+                  onChange={(e) => setIndustryFilter(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  placeholder="業界で検索"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  ビジネスフェーズ
+                </label>
+                <input
+                  type="text"
+                  value={phaseFilter}
+                  onChange={(e) => setPhaseFilter(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  placeholder="フェーズで検索"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">開始日</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">終了日</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={resetFilters}
+                  className="w-full p-2 bg-gray-300 hover:bg-gray-400 rounded"
+                >
+                  フィルターをリセット
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <div className="text-sm text-gray-600">総評価数</div>
+                <div className="text-2xl font-bold">{assessments.length}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">フィルター結果</div>
+                <div className="text-2xl font-bold">
+                  {filteredAssessments.length}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">平均スコア</div>
+                <div className="text-2xl font-bold">
+                  {filteredAssessments.length > 0
+                    ? (
+                        filteredAssessments.reduce(
+                          (sum, a) => sum + (a.avg_score || 0),
+                          0
+                        ) / filteredAssessments.length
+                      ).toFixed(1)
+                    : "0.0"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">最新評価</div>
+                <div className="text-sm font-medium">
+                  {filteredAssessments.length > 0
+                    ? new Date(
+                        filteredAssessments[0].created_at
+                      ).toLocaleDateString()
+                    : "-"}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-100 border-b">
-                <tr>
-                  <th className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === filteredAssessments.length && filteredAssessments.length > 0}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                  <th className="p-3">日時</th>
-                  <th className="p-3">企業名</th>
-                  <th className="p-3">回答者</th>
-                  <th className="p-3">業種</th>
-                  <th className="p-3">事業フェーズ</th>
-                  <th className="p-3">平均スコア</th>
-                  <th className="p-3">操作</th>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-3 text-left border">作成日時</th>
+                  <th className="p-3 text-left border">会社名</th>
+                  <th className="p-3 text-left border">回答者名</th>
+                  <th className="p-3 text-left border">業界</th>
+                  <th className="p-3 text-left border">ビジネスフェーズ</th>
+                  <th className="p-3 text-left border">平均スコア</th>
+                  <th className="p-3 text-left border">詳細</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAssessments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-500">
-                      データがありません
+                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                      該当するデータがありません
                     </td>
                   </tr>
                 ) : (
                   filteredAssessments.map((assessment) => (
-                    <tr key={assessment.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(assessment.id)}
-                          onChange={() => handleSelect(assessment.id)}
-                        />
+                    <tr key={assessment.id} className="hover:bg-gray-50">
+                      <td className="p-3 border">
+                        {new Date(assessment.created_at).toLocaleString()}
                       </td>
-                      <td className="p-3">{new Date(assessment.created_at).toLocaleString()}</td>
-                      <td className="p-3">{assessment.company_name || "-"}</td>
-                      <td className="p-3">{assessment.respondent_name || "-"}</td>
-                      <td className="p-3">{assessment.industry || "-"}</td>
-                      <td className="p-3">{assessment.business_phase || "-"}</td>
-                      <td className="p-3">{(assessment.avg_score || 0).toFixed(1)}</td>
-                      <td className="p-3">
-                        
+                      <td className="p-3 border">
+                        {assessment.company_name || "-"}
+                      </td>
+                      <td className="p-3 border">
+                        {assessment.respondent_name || "-"}
+                      </td>
+                      <td className="p-3 border">{assessment.industry || "-"}</td>
+                      <td className="p-3 border">
+                        {assessment.business_phase || "-"}
+                      </td>
+                      <td className="p-3 border">
+                        {(assessment.avg_score || 0).toFixed(1)}
+                      </td>
+                      <td className="p-3 border">
+                        <a
                           href={`/results/${assessment.id}`}
                           className="text-blue-600 hover:underline"
                         >
