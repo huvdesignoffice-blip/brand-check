@@ -162,22 +162,22 @@ export default function ResultsPage() {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="no-print mb-6 flex justify-between items-center">
-            <h1 className="text-3xl font-bold">ブランドチェック結果</h1>
-            <div className="flex gap-3">
-              <button
-                onClick={handlePrint}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-              >
-                PDF印刷
-              </button>
-              
-                href="/admin/brand-check"
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
-              <a>
-                管理画面に戻る
-              </a>
-            </div>
-          </div>
+  <h1 className="text-3xl font-bold">ブランドチェック結果</h1>
+  <div className="flex gap-3">
+    <button
+      onClick={handlePrint}
+      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+    >
+      PDF印刷
+    </button>
+    
+      href="/admin/brand-check"
+      className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+    <a>
+      管理画面に戻る
+    </a>
+  </div>
+</div>
 
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="mb-8 border-b-2 border-gray-200 pb-6">
