@@ -426,22 +426,35 @@ export default function ResultsPage() {
 
               {/* 矛盾検知 */}
               {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 mb-6 shadow-md">
-                  <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">⚠️</span> 矛盾検知（{displayAnalysis.contradictions.length}件）
-                  </h3>
-                  <p className="text-sm text-orange-800 mb-4 font-medium">
-                    スコア間で論理的な矛盾が検出されました。順序立てて改善することが重要です。
-                  </p>
-                  <ul className="space-y-3">
-                    {displayAnalysis.contradictions.map((contradiction: string, i: number) => (
-                      <li key={i} className="bg-white rounded p-3 border border-orange-200">
-                        <span className="text-gray-800">{contradiction}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 mb-6 shadow-md">
+    <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+      <span className="text-2xl">⚠️</span> 矛盾検知（{displayAnalysis.contradictions.length}件）
+    </h3>
+    <p className="text-sm text-orange-800 mb-4 font-medium">
+      スコア間で論理的な矛盾が検出されました。順序立てて改善することが重要です。
+    </p>
+    <ul className="space-y-3">
+      {displayAnalysis.contradictions.map((contradiction: string, i: number) => (
+        <li key={i} className="bg-white rounded p-3 border border-orange-200">
+          {editMode ? (
+            <textarea
+              value={editedReport?.contradictions?.[i] || ''}
+              onChange={(e) => {
+                const newContradictions = [...(editedReport?.contradictions || [])];
+                newContradictions[i] = e.target.value;
+                updateField('contradictions', newContradictions);
+              }}
+              className="w-full p-2 border border-gray-300 rounded"
+              rows={3}
+            />
+          ) : (
+            <span className="text-gray-800">{contradiction}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
               {/* 失敗パターン検知 */}
               {displayAnalysis.failurePatterns && displayAnalysis.failurePatterns.length > 0 && (
@@ -480,70 +493,122 @@ export default function ResultsPage() {
 
               {/* 優先アクション */}
               {displayAnalysis.priorityActions && displayAnalysis.priorityActions.length > 0 && (
-                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6 shadow-md">
-                  <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
-                  </h3>
-                  <ol className="space-y-3">
-                    {displayAnalysis.priorityActions.map((action: string, i: number) => (
-                      <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
-                        <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        <span className="leading-relaxed font-medium text-gray-800">{action}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
+  <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6 shadow-md">
+    <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+      <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
+    </h3>
+    <ol className="space-y-3">
+      {displayAnalysis.priorityActions.map((action: string, i: number) => (
+        <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
+          <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+            {i + 1}
+          </span>
+          {editMode ? (
+            <textarea
+              value={editedReport?.priorityActions?.[i] || ''}
+              onChange={(e) => {
+                const newActions = [...(editedReport?.priorityActions || [])];
+                newActions[i] = e.target.value;
+                updateField('priorityActions', newActions);
+              }}
+              className="flex-1 p-2 border border-gray-300 rounded"
+              rows={2}
+            />
+          ) : (
+            <span className="leading-relaxed font-medium text-gray-800">{action}</span>
+          )}
+        </li>
+      ))}
+    </ol>
+  </div>
+)}
 
               {/* 強み */}
               <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-green-200">
-                <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
-                  <span className="text-2xl">✓</span> 強み
-                </h3>
-                <ul className="space-y-2">
-                  {displayAnalysis.strengths.map((strength: string, i: number) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="text-green-500 text-xl mt-0.5">●</span>
-                      <span className="text-gray-700">{strength}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+  <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
+    <span className="text-2xl">✓</span> 強み
+  </h3>
+  <ul className="space-y-2">
+    {displayAnalysis.strengths.map((strength: string, i: number) => (
+      <li key={i} className="flex items-start gap-3">
+        <span className="text-green-500 text-xl mt-0.5">●</span>
+        {editMode ? (
+          <textarea
+            value={editedReport?.strengths?.[i] || ''}
+            onChange={(e) => {
+              const newStrengths = [...(editedReport?.strengths || [])];
+              newStrengths[i] = e.target.value;
+              updateField('strengths', newStrengths);
+            }}
+            className="flex-1 p-2 border border-gray-300 rounded"
+            rows={2}
+          />
+        ) : (
+          <span className="text-gray-700">{strength}</span>
+        )}
+      </li>
+    ))}
+  </ul>
+</div>
 
               {/* 改善が必要な領域 */}
               {displayAnalysis.weaknesses && displayAnalysis.weaknesses.length > 0 && (
-                <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-orange-200">
-                  <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">△</span> 改善が必要な領域
-                  </h3>
-                  <ul className="space-y-2">
-                    {displayAnalysis.weaknesses.map((weakness: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-orange-500 text-xl mt-0.5">●</span>
-                        <span className="text-gray-700">{weakness}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-orange-200">
+    <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
+      <span className="text-2xl">△</span> 改善が必要な領域
+    </h3>
+    <ul className="space-y-2">
+      {displayAnalysis.weaknesses.map((weakness: string, i: number) => (
+        <li key={i} className="flex items-start gap-3">
+          <span className="text-orange-500 text-xl mt-0.5">●</span>
+          {editMode ? (
+            <textarea
+              value={editedReport?.weaknesses?.[i] || ''}
+              onChange={(e) => {
+                const newWeaknesses = [...(editedReport?.weaknesses || [])];
+                newWeaknesses[i] = e.target.value;
+                updateField('weaknesses', newWeaknesses);
+              }}
+              className="flex-1 p-2 border border-gray-300 rounded"
+              rows={2}
+            />
+          ) : (
+            <span className="text-gray-700">{weakness}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
               {/* 成功への道筋 */}
               {displayAnalysis.successPath && displayAnalysis.successPath.length > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-6 shadow-md">
-                  <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎯</span> 成功への道筋
-                  </h3>
-                  <ul className="space-y-3">
-                    {displayAnalysis.successPath.map((path: string, i: number) => (
-                      <li key={i} className="bg-white rounded p-3 border border-green-200">
-                        <span className="text-gray-800 font-medium">{path}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-6 shadow-md">
+    <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+      <span className="text-2xl">🎯</span> 成功への道筋
+    </h3>
+    <ul className="space-y-3">
+      {displayAnalysis.successPath.map((path: string, i: number) => (
+        <li key={i} className="bg-white rounded p-3 border border-green-200">
+          {editMode ? (
+            <textarea
+              value={editedReport?.successPath?.[i] || ''}
+              onChange={(e) => {
+                const newPath = [...(editedReport?.successPath || [])];
+                newPath[i] = e.target.value;
+                updateField('successPath', newPath);
+              }}
+              className="w-full p-2 border border-gray-300 rounded"
+              rows={2}
+            />
+          ) : (
+            <span className="text-gray-800 font-medium">{path}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
               {/* 具体的な改善提案 */}
               <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-blue-200">
