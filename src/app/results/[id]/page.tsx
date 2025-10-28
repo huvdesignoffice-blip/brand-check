@@ -611,21 +611,35 @@ export default function ResultsPage() {
 )}
 
               {/* 具体的な改善提案 */}
-              <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-blue-200">
-                <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
-                  <span className="text-2xl">→</span> 具体的な改善提案
-                </h3>
-                <ol className="space-y-3">
-                  {displayAnalysis.recommendations.map((rec: string, i: number) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                        {i + 1}
-                      </span>
-                      <span className="text-gray-700">{rec}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
+             {/* 具体的な改善提案 */}
+<div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-blue-200">
+  <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+    <span className="text-2xl">→</span> 具体的な改善提案
+  </h3>
+  <ol className="space-y-3">
+    {displayAnalysis.recommendations.map((rec: string, i: number) => (
+      <li key={i} className="flex items-start gap-3">
+        <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+          {i + 1}
+        </span>
+        {editMode ? (
+          <textarea
+            value={editedReport?.recommendations?.[i] || ''}
+            onChange={(e) => {
+              const newRecommendations = [...(editedReport?.recommendations || [])];
+              newRecommendations[i] = e.target.value;
+              updateField('recommendations', newRecommendations);
+            }}
+            className="flex-1 p-2 border border-gray-300 rounded"
+            rows={2}
+          />
+        ) : (
+          <span className="text-gray-700">{rec}</span>
+        )}
+      </li>
+    ))}
+  </ol>
+</div>
 
               {/* 事業フェーズ別アドバイス */}
               <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-6 shadow-md border border-purple-300">
