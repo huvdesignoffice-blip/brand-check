@@ -189,7 +189,7 @@ export default function ResultsPage() {
                 </div>
                 <div className="flex-shrink-0">
                   <Image
-                    src="/logo.png"
+                    src="/variation logo_1.png"
                     alt="HUV Design Office Logo"
                     width={150}
                     height={60}
