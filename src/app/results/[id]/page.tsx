@@ -36,6 +36,7 @@ type AssessmentData = {
   q11_ip_protection: number;
   q12_growth_intent: number;
   avg_score: number;
+  ai_report?: any;
 };
 
 const categories = [
@@ -60,6 +61,9 @@ export default function ResultsPage() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editedReport, setEditedReport] = useState<AnalysisResult | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const supabase = createClientComponentClient();
 
@@ -84,35 +88,98 @@ export default function ResultsPage() {
 
       setAssessment(data);
 
-      // AI分析を実行
-      const scores = [
-        data.q1_market_understanding,
-        data.q2_competitive_analysis,
-        data.q3_self_analysis,
-        data.q4_value_proposition,
-        data.q5_uniqueness,
-        data.q6_product_service,
-        data.q7_communication,
-        data.q8_inner_branding,
-        data.q9_kpi_management,
-        data.q10_results,
-        data.q11_ip_protection,
-        data.q12_growth_intent,
-      ];
+      // 保存されたレポートがあればそれを使用、なければAI分析を実行
+      let analysisResult: AnalysisResult;
+      
+      if (data.ai_report) {
+        analysisResult = data.ai_report;
+      } else {
+        const scores = [
+          data.q1_market_understanding,
+          data.q2_competitive_analysis,
+          data.q3_self_analysis,
+          data.q4_value_proposition,
+          data.q5_uniqueness,
+          data.q6_product_service,
+          data.q7_communication,
+          data.q8_inner_branding,
+          data.q9_kpi_management,
+          data.q10_results,
+          data.q11_ip_protection,
+          data.q12_growth_intent,
+        ];
 
-      const analysisResult = analyzeScores(
-        scores,
-        data.business_phase || "",
-        data.memo || undefined
-      );
+        analysisResult = analyzeScores(
+          scores,
+          data.business_phase || "",
+          data.memo || undefined
+        );
+      }
 
       setAnalysis(analysisResult);
+      setEditedReport(analysisResult);
     } catch (err) {
       console.error("Error fetching assessment:", err);
       setError("データの取得に失敗しました");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSave() {
+    if (!editedReport) return;
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("survey_results")
+        .update({ ai_report: editedReport })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setAnalysis(editedReport);
+      setEditMode(false);
+      alert("レポートを保存しました");
+    } catch (err) {
+      console.error("Error saving report:", err);
+      alert("保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleRegenerate() {
+    if (!assessment) return;
+
+    const scores = [
+      assessment.q1_market_understanding,
+      assessment.q2_competitive_analysis,
+      assessment.q3_self_analysis,
+      assessment.q4_value_proposition,
+      assessment.q5_uniqueness,
+      assessment.q6_product_service,
+      assessment.q7_communication,
+      assessment.q8_inner_branding,
+      assessment.q9_kpi_management,
+      assessment.q10_results,
+      assessment.q11_ip_protection,
+      assessment.q12_growth_intent,
+    ];
+
+    const newAnalysis = analyzeScores(
+      scores,
+      assessment.business_phase || "",
+      assessment.memo || undefined
+    );
+
+    setEditedReport(newAnalysis);
+  }
+
+  function updateField(field: keyof AnalysisResult, value: any) {
+    if (!editedReport) return;
+    setEditedReport({ ...editedReport, [field]: value });
   }
 
   function handlePrint() {
@@ -142,6 +209,9 @@ export default function ResultsPage() {
     value: assessment[cat.key as keyof AssessmentData] as number,
   }));
 
+  const displayAnalysis = editMode ? editedReport : analysis;
+  if (!displayAnalysis) return null;
+
   return (
     <>
       <style jsx global>{`
@@ -164,20 +234,53 @@ export default function ResultsPage() {
           <div className="no-print mb-6 flex justify-between items-center">
             <h1 className="text-3xl font-bold">ブランドチェック結果</h1>
             <div className="flex gap-3">
-              <button
-                onClick={handlePrint}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-              >
-                PDF印刷
-              </button>
-              
-              <a
-                href="/admin/brand-check"
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
-              
-                >
-                管理画面に戻る
-              </a>
+              {editMode ? (
+                <>
+                  <button
+                    onClick={handleRegenerate}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    AI生成に戻す
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
+                    {saving ? "保存中..." : "保存"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditMode(false);
+                      setEditedReport(analysis);
+                    }}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    編集
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    PDF印刷
+                  </button>
+                  <a
+                    href="/admin/brand-check"
+                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
+                  >
+                    管理画面に戻る
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -191,7 +294,7 @@ export default function ResultsPage() {
                 </div>
                 <div className="flex-shrink-0">
                   <Image
-                    src="/variation logo_1.png"
+                    src="/variation_logo_1.png"
                     alt="HUV Design Office Logo"
                     width={150}
                     height={60}
@@ -276,7 +379,7 @@ export default function ResultsPage() {
               </div>
             </div>
 
-            {/* AI診断レポート - 完全版 */}
+            {/* AI診断レポート - 完全版（編集可能） */}
             <div className="mt-8 bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-xl shadow-lg">
@@ -290,20 +393,29 @@ export default function ResultsPage() {
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-xl font-bold text-purple-600">■ 総合評価</span>
                   <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-2 rounded-full font-bold text-lg shadow">
-                    {analysis.overallRating}
+                    {displayAnalysis.overallRating}
                   </span>
                 </div>
-                <p className="text-gray-700 leading-relaxed text-base">{analysis.overallComment}</p>
+                {editMode ? (
+                  <textarea
+                    value={editedReport?.overallComment || ''}
+                    onChange={(e) => updateField('overallComment', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    rows={3}
+                  />
+                ) : (
+                  <p className="text-gray-700 leading-relaxed text-base">{displayAnalysis.overallComment}</p>
+                )}
               </div>
 
               {/* リスクアラート */}
-              {analysis.riskAlerts && analysis.riskAlerts.length > 0 && (
+              {displayAnalysis.riskAlerts && displayAnalysis.riskAlerts.length > 0 && (
                 <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
                     <span className="text-2xl">🚨</span> リスクアラート
                   </h3>
                   <ul className="space-y-3">
-                    {analysis.riskAlerts.map((alert: string, i: number) => (
+                    {displayAnalysis.riskAlerts.map((alert: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-red-200">
                         <span className="text-red-800 font-medium">{alert}</span>
                       </li>
@@ -313,16 +425,16 @@ export default function ResultsPage() {
               )}
 
               {/* 矛盾検知 */}
-              {analysis.contradictions && analysis.contradictions.length > 0 && (
+              {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
                 <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">⚠️</span> 矛盾検知（{analysis.contradictions.length}件）
+                    <span className="text-2xl">⚠️</span> 矛盾検知（{displayAnalysis.contradictions.length}件）
                   </h3>
                   <p className="text-sm text-orange-800 mb-4 font-medium">
                     スコア間で論理的な矛盾が検出されました。順序立てて改善することが重要です。
                   </p>
                   <ul className="space-y-3">
-                    {analysis.contradictions.map((contradiction: string, i: number) => (
+                    {displayAnalysis.contradictions.map((contradiction: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-orange-200">
                         <span className="text-gray-800">{contradiction}</span>
                       </li>
@@ -332,13 +444,13 @@ export default function ResultsPage() {
               )}
 
               {/* 失敗パターン検知 */}
-              {analysis.failurePatterns && analysis.failurePatterns.length > 0 && (
+              {displayAnalysis.failurePatterns && displayAnalysis.failurePatterns.length > 0 && (
                 <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
                     <span className="text-2xl">❌</span> よくある失敗パターンを検知
                   </h3>
                   <ul className="space-y-3">
-                    {analysis.failurePatterns.map((pattern: string, i: number) => (
+                    {displayAnalysis.failurePatterns.map((pattern: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-yellow-200">
                         <span className="text-gray-800">{pattern}</span>
                       </li>
@@ -348,7 +460,7 @@ export default function ResultsPage() {
               )}
 
               {/* 記述内容との照合分析 */}
-              {analysis.memoAnalysis && analysis.memoAnalysis.length > 0 && (
+              {displayAnalysis.memoAnalysis && displayAnalysis.memoAnalysis.length > 0 && (
                 <div className="bg-cyan-50 border-2 border-cyan-300 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-cyan-700 mb-4 flex items-center gap-2">
                     <span className="text-2xl">🔍</span> 記述内容との照合分析
@@ -357,7 +469,7 @@ export default function ResultsPage() {
                     記述された課題・展望とスコアを照合し、整合性を分析しました。
                   </p>
                   <ul className="space-y-3">
-                    {analysis.memoAnalysis.map((item: string, i: number) => (
+                    {displayAnalysis.memoAnalysis.map((item: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-cyan-200">
                         <span className="text-gray-800">{item}</span>
                       </li>
@@ -367,13 +479,13 @@ export default function ResultsPage() {
               )}
 
               {/* 優先アクション */}
-              {analysis.priorityActions && analysis.priorityActions.length > 0 && (
+              {displayAnalysis.priorityActions && displayAnalysis.priorityActions.length > 0 && (
                 <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
                     <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
                   </h3>
                   <ol className="space-y-3">
-                    {analysis.priorityActions.map((action: string, i: number) => (
+                    {displayAnalysis.priorityActions.map((action: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
                         <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                           {i + 1}
@@ -391,7 +503,7 @@ export default function ResultsPage() {
                   <span className="text-2xl">✓</span> 強み
                 </h3>
                 <ul className="space-y-2">
-                  {analysis.strengths.map((strength: string, i: number) => (
+                  {displayAnalysis.strengths.map((strength: string, i: number) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="text-green-500 text-xl mt-0.5">●</span>
                       <span className="text-gray-700">{strength}</span>
@@ -401,13 +513,13 @@ export default function ResultsPage() {
               </div>
 
               {/* 改善が必要な領域 */}
-              {analysis.weaknesses && analysis.weaknesses.length > 0 && (
+              {displayAnalysis.weaknesses && displayAnalysis.weaknesses.length > 0 && (
                 <div className="bg-white rounded-lg p-6 mb-6 shadow-md border border-orange-200">
                   <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
                     <span className="text-2xl">△</span> 改善が必要な領域
                   </h3>
                   <ul className="space-y-2">
-                    {analysis.weaknesses.map((weakness: string, i: number) => (
+                    {displayAnalysis.weaknesses.map((weakness: string, i: number) => (
                       <li key={i} className="flex items-start gap-3">
                         <span className="text-orange-500 text-xl mt-0.5">●</span>
                         <span className="text-gray-700">{weakness}</span>
@@ -418,13 +530,13 @@ export default function ResultsPage() {
               )}
 
               {/* 成功への道筋 */}
-              {analysis.successPath && analysis.successPath.length > 0 && (
+              {displayAnalysis.successPath && displayAnalysis.successPath.length > 0 && (
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-6 shadow-md">
                   <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
                     <span className="text-2xl">🎯</span> 成功への道筋
                   </h3>
                   <ul className="space-y-3">
-                    {analysis.successPath.map((path: string, i: number) => (
+                    {displayAnalysis.successPath.map((path: string, i: number) => (
                       <li key={i} className="bg-white rounded p-3 border border-green-200">
                         <span className="text-gray-800 font-medium">{path}</span>
                       </li>
@@ -439,7 +551,7 @@ export default function ResultsPage() {
                   <span className="text-2xl">→</span> 具体的な改善提案
                 </h3>
                 <ol className="space-y-3">
-                  {analysis.recommendations.map((rec: string, i: number) => (
+                  {displayAnalysis.recommendations.map((rec: string, i: number) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
                         {i + 1}
@@ -455,7 +567,16 @@ export default function ResultsPage() {
                 <h3 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
                   <span className="text-2xl">💡</span> {assessment.business_phase}フェーズのアドバイス
                 </h3>
-                <p className="text-gray-800 leading-relaxed font-medium">{analysis.phaseAdvice}</p>
+                {editMode ? (
+                  <textarea
+                    value={editedReport?.phaseAdvice || ''}
+                    onChange={(e) => updateField('phaseAdvice', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    rows={3}
+                  />
+                ) : (
+                  <p className="text-gray-800 leading-relaxed font-medium">{displayAnalysis.phaseAdvice}</p>
+                )}
               </div>
             </div>
 
