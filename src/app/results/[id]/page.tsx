@@ -170,10 +170,12 @@ export default function ResultsPage() {
               >
                 PDF印刷
               </button>
-              <a>
+              
+              <a
                 href="/admin/brand-check"
                 className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
               
+                >
                 管理画面に戻る
               </a>
             </div>
