@@ -21,6 +21,7 @@ export default function BrandCheckAdminPage() {
   const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const [companyFilter, setCompanyFilter] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
@@ -134,6 +135,39 @@ export default function BrandCheckAdminPage() {
     } else {
       setSortField(field);
       setSortDirection("desc");
+    }
+  }
+
+  async function handleDelete(id: string, companyName: string | null) {
+    // 確認ダイアログを表示
+    const confirmMessage = `以下のデータを削除しますか？\n\n会社名: ${
+      companyName || "未入力"
+    }\nID: ${id}\n\nこの操作は取り消せません。`;
+
+    if (!window.confirm(confirmMessage)) {
+      return; // 「いいえ」またはキャンセルが選択された場合
+    }
+
+    try {
+      setDeleting(id);
+
+      const { error } = await supabase
+        .from("survey_results")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // 成功メッセージ
+      alert("データを削除しました");
+
+      // ローカルの状態を更新
+      setAssessments(assessments.filter((a) => a.id !== id));
+    } catch (error) {
+      console.error("Error deleting result:", error);
+      alert("削除に失敗しました: " + (error as Error).message);
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -349,13 +383,14 @@ export default function BrandCheckAdminPage() {
                       )}
                     </button>
                   </th>
-                  <th className="p-3 text-left border">詳細</th>
+                  <th className="p-3 text-center border">詳細</th>
+                  <th className="p-3 text-center border">削除</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAssessments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                    <td colSpan={8} className="p-8 text-center text-gray-500">
                       該当するデータがありません
                     </td>
                   </tr>
@@ -378,12 +413,22 @@ export default function BrandCheckAdminPage() {
                       <td className="p-3 border">
                         {(assessment.avg_score || 0).toFixed(1)}
                       </td>
-                      <td className="p-3 border">
-                        <a                            href={`/results/${assessment.id}`}
-  className="text-blue-600 hover:underline"
->
-  詳細
-</a>
+                      <td className="p-3 border text-center">
+                        <a
+                          href={`/results/${assessment.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          詳細
+                        </a>
+                      </td>
+                      <td className="p-3 border text-center">
+                        <button
+                          onClick={() => handleDelete(assessment.id, assessment.company_name)}
+                          disabled={deleting === assessment.id}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleting === assessment.id ? "削除中..." : "削除"}
+                        </button>
                       </td>
                     </tr>
                   ))
