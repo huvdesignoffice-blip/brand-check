@@ -220,21 +220,23 @@ export default function ResultPage() {
   }
 
   const scores = [
-    result.q1_market_understanding,
-    result.q2_competitive_analysis,
-    result.q3_self_analysis,
-    result.q4_value_proposition,
-    result.q5_uniqueness,
-    result.q6_product_service,
-    result.q7_communication,
-    result.q8_inner_branding,
-    result.q9_kpi_management,
-    result.q10_results,
-    result.q11_ip_protection,
-    result.q12_growth_intent,
-  ];
+  result.q1_market_understanding,
+  result.q2_competitive_analysis,
+  result.q3_self_analysis,
+  result.q4_value_proposition,
+  result.q5_uniqueness,
+  result.q6_product_service,
+  result.q7_communication,
+  result.q8_inner_branding,
+  result.q9_kpi_management,
+  result.q10_results,
+  result.q11_ip_protection,
+  result.q12_growth_intent,
+];
 
-  const avgScore = result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12).toFixed(1);
+const avgScore = Number(
+  result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12)
+).toFixed(1);
 
   const chartData = QUESTIONS.map((q) => ({
     category: q.label,
@@ -384,19 +386,19 @@ export default function ResultPage() {
 
           {/* 総合スコア */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
-                  <p className="text-6xl font-bold text-white">{avgScore}</p>
-                  <p className="text-xl text-blue-100">/ 5.0</p>
-                </div>
-                <p className={`text-2xl font-bold mt-4 px-6 py-2 rounded-full inline-block ${getScoreColor(Number(avgScore))}`}>
-                  {getScoreLabel(Number(avgScore))}
-                </p>
-              </div>
-            </div>
-          </div>
+  <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
+  <div className="flex items-center justify-center">
+    <div className="text-center">
+      <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
+        <p className="text-6xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
+        <p className="text-xl text-blue-100">/ 5.0</p>
+      </div>
+      <p className={`text-2xl font-bold mt-4 px-6 py-2 rounded-full inline-block ${getScoreColor(Number(avgScore))}`}>
+        {getScoreLabel(Number(avgScore))}
+      </p>
+    </div>
+  </div>
+</div>
 
           {/* レーダーチャート */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
