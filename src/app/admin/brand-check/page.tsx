@@ -1,5 +1,8 @@
 "use client";
 
+// ビルド時の静的生成をスキップ
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
