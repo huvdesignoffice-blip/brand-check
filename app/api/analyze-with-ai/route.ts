@@ -21,9 +21,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { scores, memo, businessPhase, companyName } = body;
 
+    console.log("=== AI Analysis Request ===");
+    console.log("Company:", companyName);
+    console.log("Phase:", businessPhase);
+    console.log("Scores:", scores);
+
     // 環境変数チェック
     if (!process.env.ANTHROPIC_API_KEY) {
-      console.error("ANTHROPIC_API_KEY is not set");
+      console.error("❌ ANTHROPIC_API_KEY is not set");
       return NextResponse.json(
         { error: "API設定エラー: ANTHROPIC_API_KEYが設定されていません" },
         { status: 500 }
@@ -59,11 +64,16 @@ ${memo || '記載なし'}
 
 ---
 
-以下の形式のJSONで、詳細な分析レポートを作成してください。各項目は具体的で実行可能な内容にしてください。
+以下の形式の**純粋なJSON**で、詳細な分析レポートを作成してください。
+
+重要: 
+- マークダウン記法（\`\`\`json など）は使用しないでください
+- JSON形式のみを出力してください
+- 説明文は一切不要です
 
 {
   "overallComment": "総合評価のコメント（200-300文字程度で、現状の総合的な評価と特徴を記述）",
-  "contradictions": ["矛盾点1", "矛盾点2", "矛盾点3"],
+  "contradictions": ["矛盾点1", "矛盾点2"],
   "priorityActions": ["最優先アクション1", "最優先アクション2", "最優先アクション3"],
   "strengths": ["強み1", "強み2", "強み3"],
   "weaknesses": ["改善が必要な領域1", "改善が必要な領域2", "改善が必要な領域3"],
@@ -81,9 +91,9 @@ ${memo || '記載なし'}
 6. successPath: 3-6ヶ月で取り組むべき具体的なステップを時系列で提示
 7. phaseAdvice: 事業フェーズ（構想中・売り出し中・成長中・見直し中）に応じた具体的なアドバイス
 
-JSONのみを出力してください。説明文やマークダウンは不要です。`;
+純粋なJSONのみを出力してください。`;
 
-    console.log("Calling Claude API...");
+    console.log("📞 Calling Claude API...");
 
     // Claude API呼び出し
     const message = await anthropic.messages.create({
@@ -98,7 +108,8 @@ JSONのみを出力してください。説明文やマークダウンは不要�
       ],
     });
 
-    console.log("Claude API response received");
+    console.log("✅ Claude API response received");
+    console.log("Response type:", message.content[0].type);
 
     // レスポンスからテキストを抽出
     const responseText = message.content[0].type === 'text' 
@@ -106,27 +117,75 @@ JSONのみを出力してください。説明文やマークダウンは不要�
       : '';
 
     if (!responseText) {
+      console.error("❌ Empty response from Claude API");
       throw new Error("Claude APIからの応答が空です");
     }
 
-    // JSONをパース（マークダウンのコードブロックを除去）
+    console.log("📝 Raw response (first 200 chars):", responseText.substring(0, 200));
+
+    // JSONをパース（複数のクリーニングパターンを試行）
     let cleanedResponse = responseText.trim();
     
-    // ```json と ``` を除去
-    if (cleanedResponse.startsWith('```json')) {
-      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-    } else if (cleanedResponse.startsWith('```')) {
-      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/```\s*$/, '');
+    // パターン1: ```json ``` で囲まれている場合
+    if (cleanedResponse.includes('```json')) {
+      cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      console.log("🧹 Removed ```json markers");
+    }
+    // パターン2: ``` のみで囲まれている場合
+    else if (cleanedResponse.includes('```')) {
+      cleanedResponse = cleanedResponse.replace(/```\s*/g, '');
+      console.log("🧹 Removed ``` markers");
     }
 
-    const aiReport = JSON.parse(cleanedResponse);
+    // 前後の改行や空白を削除
+    cleanedResponse = cleanedResponse.trim();
 
-    console.log("AI Report generated successfully");
+    // JSONの開始位置を探す
+    const jsonStart = cleanedResponse.indexOf('{');
+    const jsonEnd = cleanedResponse.lastIndexOf('}');
+    
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanedResponse = cleanedResponse.substring(jsonStart, jsonEnd + 1);
+      console.log("🧹 Extracted JSON from position", jsonStart, "to", jsonEnd);
+    }
+
+    console.log("📄 Cleaned response (first 200 chars):", cleanedResponse.substring(0, 200));
+
+    let aiReport;
+    try {
+      aiReport = JSON.parse(cleanedResponse);
+      console.log("✅ JSON parsed successfully");
+      console.log("Keys:", Object.keys(aiReport));
+    } catch (parseError: any) {
+      console.error("❌ JSON Parse Error:", parseError.message);
+      console.error("Failed to parse:", cleanedResponse.substring(0, 500));
+      throw new Error(`AIのレスポンス形式が不正です: ${parseError.message}`);
+    }
+
+    // 必須フィールドの検証
+    const requiredFields = [
+      'overallComment', 
+      'contradictions', 
+      'priorityActions', 
+      'strengths', 
+      'weaknesses', 
+      'recommendations', 
+      'successPath', 
+      'phaseAdvice'
+    ];
+
+    const missingFields = requiredFields.filter(field => !(field in aiReport));
+    if (missingFields.length > 0) {
+      console.error("❌ Missing required fields:", missingFields);
+      throw new Error(`必須フィールドが不足しています: ${missingFields.join(', ')}`);
+    }
+
+    console.log("✅ AI Report generated successfully");
 
     return NextResponse.json(aiReport);
 
   } catch (error: any) {
-    console.error("Error in analyze-with-ai:", error);
+    console.error("❌ Error in analyze-with-ai:", error);
     
     // 詳細なエラーログ
     if (error.response) {
