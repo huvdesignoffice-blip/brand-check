@@ -97,54 +97,60 @@ export default function ResultPage() {
   }, [params.id]);
 
   async function generateAIReport(assessmentData: SurveyResult) {
-    try {
-      setGeneratingAI(true);
+  try {
+    setGeneratingAI(true);
 
-      const response = await fetch("/api/analyze-with-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scores: [
-            assessmentData.q1_market_understanding,
-            assessmentData.q2_competitive_analysis,
-            assessmentData.q3_self_analysis,
-            assessmentData.q4_value_proposition,
-            assessmentData.q5_uniqueness,
-            assessmentData.q6_product_service,
-            assessmentData.q7_communication,
-            assessmentData.q8_inner_branding,
-            assessmentData.q9_kpi_management,
-            assessmentData.q10_results,
-            assessmentData.q11_ip_protection,
-            assessmentData.q12_growth_intent,
-          ],
-          memo: assessmentData.memo,
-          businessPhase: assessmentData.business_phase,
-          companyName: assessmentData.company_name,
-        }),
-      });
+    const response = await fetch("/api/analyze-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scores: [
+          assessmentData.q1_market_understanding,
+          assessmentData.q2_competitive_analysis,
+          assessmentData.q3_self_analysis,
+          assessmentData.q4_value_proposition,
+          assessmentData.q5_uniqueness,
+          assessmentData.q6_product_service,
+          assessmentData.q7_communication,
+          assessmentData.q8_inner_branding,
+          assessmentData.q9_kpi_management,
+          assessmentData.q10_results,
+          assessmentData.q11_ip_protection,
+          assessmentData.q12_growth_intent,
+        ],
+        memo: assessmentData.memo,
+        businessPhase: assessmentData.business_phase,
+        companyName: assessmentData.company_name,
+      }),
+      // タイムアウトを60秒に設定
+      signal: AbortSignal.timeout(60000),
+    });
 
-      if (!response.ok) throw new Error("AI分析に失敗しました");
+    if (!response.ok) throw new Error("AI分析に失敗しました");
 
-      const aiReport = await response.json();
+    const aiReport = await response.json();
 
-      // データベースを更新
-      const { error: updateError } = await supabase
-        .from("survey_results")
-        .update({ ai_report: aiReport })
-        .eq("id", assessmentData.id);
+    // データベースを更新
+    const { error: updateError } = await supabase
+      .from("survey_results")
+      .update({ ai_report: aiReport })
+      .eq("id", assessmentData.id);
 
-      if (updateError) throw updateError;
+    if (updateError) throw updateError;
 
-      // 状態を更新
-      setResult((prev) => (prev ? { ...prev, ai_report: aiReport } : null));
-    } catch (err) {
-      console.error("Error generating AI report:", err);
+    // 状態を更新
+    setResult((prev) => (prev ? { ...prev, ai_report: aiReport } : null));
+  } catch (err) {
+    console.error("Error generating AI report:", err);
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      alert("AI分析がタイムアウトしました。もう一度お試しください。");
+    } else {
       alert("AI分析に失敗しました: " + (err as Error).message);
-    } finally {
-      setGeneratingAI(false);
     }
+  } finally {
+    setGeneratingAI(false);
   }
+}
 
   function handleEdit() {
     if (result?.ai_report) {
