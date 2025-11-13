@@ -2,8 +2,6 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
@@ -28,19 +26,11 @@ interface SurveyResult {
 }
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [results, setResults] = useState<SurveyResult[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-
     const fetchResults = async () => {
       const { data, error } = await supabase
         .from("survey_results")
@@ -56,18 +46,14 @@ export default function AdminPage() {
     };
 
     fetchResults();
-  }, [session, status, router, supabase]);
+  }, [supabase]);
 
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">読み込み中...</div>
       </div>
     );
-  }
-
-  if (!session) {
-    return null;
   }
 
   const totalCount = results.length;
