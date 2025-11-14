@@ -22,6 +22,97 @@ const QUESTIONS = [
 
 const BUSINESS_PHASES = ['構想中', '売り出し中', '成長中', '見直し中'];
 
+const INDUSTRIES = [
+  // IT・テクノロジー
+  "ソフトウェア開発",
+  "SaaS・クラウドサービス",
+  "Web制作・デザイン",
+  "システムインテグレーション",
+  "ITコンサルティング",
+  "セキュリティ",
+  
+  // 製造業
+  "食品製造",
+  "繊維・アパレル製造",
+  "化学・医薬品製造",
+  "金属・機械製造",
+  "電子部品・デバイス製造",
+  "自動車・輸送機器製造",
+  
+  // 小売・EC
+  "百貨店・総合小売",
+  "専門小売（食品）",
+  "専門小売（アパレル）",
+  "専門小売（家電・雑貨）",
+  "EC・オンライン販売",
+  "卸売",
+  
+  // 飲食・宿泊
+  "飲食店（レストラン）",
+  "カフェ・喫茶店",
+  "居酒屋・バー",
+  "ホテル・旅館",
+  "民泊",
+  "観光・レジャー施設",
+  
+  // 建設・不動産
+  "建設・土木",
+  "建築設計",
+  "不動産売買・仲介",
+  "不動産管理",
+  "リフォーム・リノベーション",
+  
+  // 医療・福祉
+  "病院・クリニック",
+  "歯科医院",
+  "介護・福祉施設",
+  "薬局・ドラッグストア",
+  "整体・鍼灸",
+  
+  // 教育
+  "学習塾・予備校",
+  "語学教室",
+  "専門学校・各種スクール",
+  "企業研修",
+  "オンライン教育",
+  
+  // 金融・保険
+  "銀行・信用金庫",
+  "証券",
+  "保険",
+  "ファイナンス",
+  
+  // 専門サービス
+  "経営コンサルティング",
+  "マーケティング・PR",
+  "広告代理店",
+  "デザイン事務所",
+  "法律事務所",
+  "会計・税理士事務所",
+  "人材紹介・派遣",
+  
+  // メディア・エンタメ
+  "出版・印刷",
+  "放送・映像制作",
+  "イベント企画・運営",
+  "芸能・音楽",
+  "ゲーム制作",
+  
+  // 物流・インフラ
+  "運輸・配送",
+  "倉庫・物流",
+  "エネルギー",
+  "通信",
+  
+  // その他
+  "農業",
+  "漁業",
+  "美容・理容",
+  "クリーニング",
+  "その他サービス",
+  "その他",
+];
+
 export default function SurveyPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
@@ -193,14 +284,19 @@ export default function SurveyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">業種</label>
-                <input
-                  type="text"
+                <select
                   name="industry"
                   value={formData.industry}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="例：IT・サービス業、製造業など"
-                />
+                >
+                  <option value="">選択してください</option>
+                  {INDUSTRIES.map((industry) => (
+                    <option key={industry} value={industry}>
+                      {industry}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
