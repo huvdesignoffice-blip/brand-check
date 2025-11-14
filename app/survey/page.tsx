@@ -177,107 +177,66 @@ export default function SurveyPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) return;
+    if (!validateForm()) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // avg_scoreは除外して送信（Supabaseが自動計算）
-    const { data, error } = await supabase
-      .from('survey_results')
-      .insert([
-        {
-          ...formData,
-          ...scores,
-          // avg_score は送信しない（自動生成される）
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    console.log('Success! Data:', data);
-
-    // 結果ページにリダイレクト
-    router.push('/thank-you');
-  } catch (error) {
-    console.error('Error submitting survey:', error);
-    
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : JSON.stringify(error);
-    
-    alert(`送信に失敗しました: ${errorMessage}`);
-  } finally {
-    setLoading(false);
-  }
-};const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!validateForm()) return;
-
-  setLoading(true);
-
-  try {
-    // Supabaseにデータを保存
-    const { data, error } = await supabase
-      .from('survey_results')
-      .insert([
-        {
-          ...formData,
-          ...scores,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    console.log('Success! Data:', data);
-
-    // 管理者にメール通知を送信
     try {
-      await fetch('/api/send-survey-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_name: data.company_name,
-          respondent_name: data.respondent_name,
-          respondent_email: data.respondent_email,
-          industry: data.industry,
-          business_phase: data.business_phase,
-          avg_score: data.avg_score,
-          result_id: data.id,
-        }),
-      });
-    } catch (emailError) {
-      // メール送信失敗してもサーベイは完了
-      console.error('Email notification failed:', emailError);
-    }
+      // Supabaseにデータを保存
+      const { data, error } = await supabase
+        .from('survey_results')
+        .insert([
+          {
+            ...formData,
+            ...scores,
+          },
+        ])
+        .select()
+        .single();
 
-    // サンキューページにリダイレクト
-    router.push('/thank-you');
-  } catch (error) {
-    console.error('Error submitting survey:', error);
-    
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : JSON.stringify(error);
-    
-    alert(`送信に失敗しました: ${errorMessage}`);
-  } finally {
-    setLoading(false);
-  }
-};
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Success! Data:', data);
+
+      // 管理者にメール通知を送信
+      try {
+        await fetch('/api/send-survey-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: data.company_name,
+            respondent_name: data.respondent_name,
+            respondent_email: data.respondent_email,
+            industry: data.industry,
+            business_phase: data.business_phase,
+            avg_score: data.avg_score,
+            result_id: data.id,
+          }),
+        });
+      } catch (emailError) {
+        // メール送信失敗してもサーベイは完了
+        console.error('Email notification failed:', emailError);
+      }
+
+      // サンキューページにリダイレクト
+      router.push('/thank-you');
+    } catch (error) {
+      console.error('Error submitting survey:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : JSON.stringify(error);
+      
+      alert(`送信に失敗しました: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4">
