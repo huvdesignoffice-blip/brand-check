@@ -205,7 +205,7 @@ export default function SurveyPage() {
     console.log('Success! Data:', data);
 
     // 結果ページにリダイレクト
-    router.push(`/results/${data.id}`);
+    router.push('/thank-you');
   } catch (error) {
     console.error('Error submitting survey:', error);
     
