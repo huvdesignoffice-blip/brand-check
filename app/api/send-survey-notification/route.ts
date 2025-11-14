@@ -18,8 +18,8 @@ export async function POST(request: Request) {
 
     // 管理者に送信する通知メール
     const { data, error } = await resend.emails.send({
-      from: 'Brand Check <noreply@huvdesignoffice.com>',
-      to: process.env.ADMIN_EMAIL || 'your-email@example.com', // 環境変数で設定
+      from: 'Brand Check <delivered@resend.dev>',
+      to: process.env.ADMIN_EMAIL || 'huvdesignoffice@gmail.com', // 環境変数で設定
       subject: `【新規診断】${company_name} 様からブランドチェック診断が届きました`,
       html: `
         <!DOCTYPE html>
