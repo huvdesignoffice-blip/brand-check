@@ -358,9 +358,8 @@ export default function SurveyPage() {
                   ))}
                 </select>
               </div>
-            </div>
-          </div>
-<div>
+              
+            <div>
   <label className="block text-sm font-medium text-gray-700 mb-2">
     年間売上規模 <span className="text-red-500">*</span>
   </label>
@@ -378,6 +377,8 @@ export default function SurveyPage() {
       </option>
     ))}
   </select>
+</div>
+</div>
 </div>
           {/* 質問セクション */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
