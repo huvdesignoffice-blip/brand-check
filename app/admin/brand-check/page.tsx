@@ -12,6 +12,7 @@ type Assessment = {
   company_name: string | null;
   respondent_name: string | null;
   industry: string | null;
+  revenue_scale: string | null;
   business_phase: string | null;
   avg_score: number | null;
 };
@@ -370,6 +371,7 @@ export default function BrandCheckAdminPage() {
                   </th>
                   <th className="p-3 text-left border">回答者名</th>
                   <th className="p-3 text-left border">業界</th>
+                  <th className="p-3 text-left border">売上規模</th>
                   <th className="p-3 text-left border">ビジネスフェーズ</th>
                   <th className="p-3 text-left border">
                     <button
@@ -406,6 +408,7 @@ export default function BrandCheckAdminPage() {
                         {assessment.respondent_name || "-"}
                       </td>
                       <td className="p-3 border">{assessment.industry || "-"}</td>
+                      <td className="p-3 border">{assessment.revenue_scale || "-"}</td> 
                       <td className="p-3 border">
                         {assessment.business_phase || "-"}
                       </td>

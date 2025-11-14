@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       respondent_name, 
       respondent_email,
       industry,
+      revenue_scale, 
       business_phase,
       avg_score,
       result_id 
@@ -122,6 +123,11 @@ export async function POST(request: Request) {
                   <span class="info-value">${industry || '未記入'}</span>
                 </div>
                 
+                <div class="info-row">
+  <span class="info-label">年間売上規模:</span>
+  <span class="info-value">${revenue_scale || '未記入'}</span>
+</div>
+
                 <div class="info-row" style="border-bottom: none;">
                   <span class="info-label">事業フェーズ:</span>
                   <span class="info-value">${business_phase}</span>

@@ -27,6 +27,7 @@ interface SurveyResult {
   respondent_name: string;
   respondent_email: string;
   industry: string;
+  revenue_scale: string;
   business_phase: string;
   memo: string;
   q1_market_understanding: number;
@@ -371,6 +372,10 @@ const avgScore = Number(
                 <p className="text-sm text-gray-600 mb-1">業種</p>
                 <p className="text-lg font-semibold text-gray-900">{result.industry || '未回答'}</p>
               </div>
+              <div>
+  <p className="text-sm text-gray-600 mb-1">年間売上規模</p>
+  <p className="text-lg font-semibold text-gray-900">{result.revenue_scale || '未回答'}</p>
+</div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">事業フェーズ</p>
                 <p className="text-lg font-semibold text-gray-900">{result.business_phase}</p>
