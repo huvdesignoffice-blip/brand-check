@@ -217,6 +217,66 @@ export default function SurveyPage() {
   } finally {
     setLoading(false);
   }
+};const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!validateForm()) return;
+
+  setLoading(true);
+
+  try {
+    // Supabaseにデータを保存
+    const { data, error } = await supabase
+      .from('survey_results')
+      .insert([
+        {
+          ...formData,
+          ...scores,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    console.log('Success! Data:', data);
+
+    // 管理者にメール通知を送信
+    try {
+      await fetch('/api/send-survey-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_name: data.company_name,
+          respondent_name: data.respondent_name,
+          respondent_email: data.respondent_email,
+          industry: data.industry,
+          business_phase: data.business_phase,
+          avg_score: data.avg_score,
+          result_id: data.id,
+        }),
+      });
+    } catch (emailError) {
+      // メール送信失敗してもサーベイは完了
+      console.error('Email notification failed:', emailError);
+    }
+
+    // サンキューページにリダイレクト
+    router.push('/thank-you');
+  } catch (error) {
+    console.error('Error submitting survey:', error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : JSON.stringify(error);
+    
+    alert(`送信に失敗しました: ${errorMessage}`);
+  } finally {
+    setLoading(false);
+  }
 };
 
   return (
