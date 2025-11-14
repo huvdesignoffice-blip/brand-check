@@ -177,38 +177,47 @@ export default function SurveyPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const avgScore = Object.values(scores).reduce((a, b) => a + b, 0) / 12;
+  try {
+    // avg_scoreは除外して送信（Supabaseが自動計算）
+    const { data, error } = await supabase
+      .from('survey_results')
+      .insert([
+        {
+          ...formData,
+          ...scores,
+          // avg_score は送信しない（自動生成される）
+        },
+      ])
+      .select()
+      .single();
 
-      const { data, error } = await supabase
-        .from('survey_results')
-        .insert([
-          {
-            ...formData,
-            ...scores,
-            avg_score: avgScore,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // 結果ページにリダイレクト
-      router.push(`/results/${data.id}`);
-    } catch (error) {
-      console.error('Error submitting survey:', error);
-      alert('送信に失敗しました。もう一度お試しください。');
-    } finally {
-      setLoading(false);
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
     }
-  };
+
+    console.log('Success! Data:', data);
+
+    // 結果ページにリダイレクト
+    router.push(`/results/${data.id}`);
+  } catch (error) {
+    console.error('Error submitting survey:', error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : JSON.stringify(error);
+    
+    alert(`送信に失敗しました: ${errorMessage}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4">
