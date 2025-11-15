@@ -456,14 +456,7 @@ export default function SurveyPage() {
       className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
     />
     <label htmlFor="privacy-agreement" className="text-gray-700 cursor-pointer">
-      
-        href="/privacy"
-        target="_blank"
-        className="text-blue-600 hover:underline font-medium"
-      
-        個人情報保護方針
-      </a>
-      を確認し、内容に同意します。 <span className="text-red-500">*</span>
+      <a href="/privacy" target="_blank" className="text-blue-600 hover:underline font-medium">個人情報保護方針</a>を確認し、内容に同意します。 <span className="text-red-500">*</span>
     </label>
   </div>
 </div>
