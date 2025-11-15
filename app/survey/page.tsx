@@ -127,6 +127,7 @@ export default function SurveyPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
 
   const [formData, setFormData] = useState({
     company_name: '',
@@ -183,6 +184,10 @@ export default function SurveyPage() {
       alert('すべての質問に回答してください。');
       return false;
     }
+ if (!agreedToPrivacy) {
+    alert('個人情報保護方針に同意してください。');
+    return false;
+  }
 
     return true;
   };
@@ -358,7 +363,7 @@ export default function SurveyPage() {
                   ))}
                 </select>
               </div>
-              
+
             <div>
   <label className="block text-sm font-medium text-gray-700 mb-2">
     年間売上規模 <span className="text-red-500">*</span>
@@ -439,6 +444,29 @@ export default function SurveyPage() {
             />
           </div>
 
+
+{/* 個人情報保護方針への同意 */}
+<div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+  <div className="flex items-start gap-3">
+    <input
+      type="checkbox"
+      id="privacy-agreement"
+      checked={agreedToPrivacy}
+      onChange={(e) => setAgreedToPrivacy(e.target.checked)}
+      className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+    />
+    <label htmlFor="privacy-agreement" className="text-gray-700 cursor-pointer">
+      
+        href="/privacy"
+        target="_blank"
+        className="text-blue-600 hover:underline font-medium"
+      
+        個人情報保護方針
+      </a>
+      を確認し、内容に同意します。 <span className="text-red-500">*</span>
+    </label>
+  </div>
+</div>
           {/* 送信ボタン */}
           <div className="flex justify-center">
             <button
