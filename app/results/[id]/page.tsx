@@ -388,6 +388,16 @@ const avgScore = Number(
               </div>
             </div>
           </div>
+          
+{/* メモ */}
+          {result.memo && (
+            <div className="bg-white rounded-xl shadow-lg p-8 mb-8 mt-8">
+              <h3 className="text-xl font-bold mb-4">現状の課題・将来の展望</h3>
+              <p className="text-base text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">
+                {result.memo}
+              </p>
+            </div>
+          )}
 
           {/* 総合スコア */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
@@ -691,15 +701,7 @@ const avgScore = Number(
             </div>
           )}
 
-          {/* メモ */}
-          {result.memo && (
-            <div className="bg-white rounded-xl shadow-lg p-8 mb-8 mt-8">
-              <h3 className="text-xl font-bold mb-4">現状の課題・将来の展望</h3>
-              <p className="text-base text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">
-                {result.memo}
-              </p>
-            </div>
-          )}
+
 
           {/* フッター */}
           <div className="text-center text-gray-600 text-sm mt-12">
