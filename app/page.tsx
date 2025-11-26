@@ -14,7 +14,7 @@
           </p>
         </div>
         <div className="flex justify-center">
-          
+          <a
             href="/survey"
             className="block p-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors text-center max-w-md w-full"
           >
