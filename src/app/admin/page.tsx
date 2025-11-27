@@ -1,7 +1,5 @@
 'use client';
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -26,36 +24,82 @@ interface SurveyResult {
 }
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [results, setResults] = useState<SurveyResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-
-    const fetchResults = async () => {
-      const { data, error } = await supabase
-        .from("survey_results")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching results:", error);
-      } else {
-        setResults(data || []);
-      }
+    // セッションストレージから認証状態を確認
+    const auth = sessionStorage.getItem('admin_auth');
+    if (auth === 'authenticated') {
+      setIsAuthenticated(true);
+      fetchResults();
+    } else {
       setLoading(false);
-    };
+    }
+  }, []);
 
-    fetchResults();
-  }, [session, status, router]);
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // 環境変数または固定パスワードでチェック（本番ではより安全な方法を使用）
+    if (password === "huv2024admin") {
+      sessionStorage.setItem('admin_auth', 'authenticated');
+      setIsAuthenticated(true);
+      setError("");
+      fetchResults();
+    } else {
+      setError("パスワードが正しくありません");
+    }
+  };
 
-  if (status === "loading" || loading) {
+  const fetchResults = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("survey_results")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching results:", error);
+    } else {
+      setResults(data || []);
+    }
+    setLoading(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">管理画面ログイン</h1>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="パスワードを入力"
+                required
+              />
+            </div>
+            {error && <p className="text-red-600 text-sm">{error}</p>}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              ログイン
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">読み込み中...</div>
@@ -63,13 +107,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!session) {
-    return null;
-  }
-
   const totalCount = results.length;
-
-
   const thisMonth = new Date();
   thisMonth.setDate(1);
   thisMonth.setHours(0, 0, 0, 0);
@@ -78,17 +116,17 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-  <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-    <h3 className="text-sm text-blue-600 mb-2">Total Brands</h3>
-    <p className="text-4xl font-bold text-blue-700">{totalCount}</p>
-    <p className="text-sm text-blue-600 mt-2">{newThisMonth} new this month</p>
-  </div>
-  <div className="bg-green-50 rounded-xl border border-green-200 p-6">
-    <h3 className="text-sm text-green-600 mb-2">Active Reports</h3>
-    <p className="text-4xl font-bold text-green-700">{totalCount}</p>
-    <p className="text-sm text-green-600 mt-2">All completed</p>
-  </div>
-</div>
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+          <h3 className="text-sm text-blue-600 mb-2">Total Brands</h3>
+          <p className="text-4xl font-bold text-blue-700">{totalCount}</p>
+          <p className="text-sm text-blue-600 mt-2">{newThisMonth} new this month</p>
+        </div>
+        <div className="bg-green-50 rounded-xl border border-green-200 p-6">
+          <h3 className="text-sm text-green-600 mb-2">Active Reports</h3>
+          <p className="text-4xl font-bold text-green-700">{totalCount}</p>
+          <p className="text-sm text-green-600 mt-2">All completed</p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
