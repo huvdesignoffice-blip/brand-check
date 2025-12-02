@@ -356,6 +356,40 @@ const avgScore = Number(
             </div>
           )}
 
+          {/* スコアの読み方ガイド */}
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 スコアの読み方</h2>
+            
+            <div className="space-y-4 mb-6">
+              <p className="text-gray-700 font-semibold">このブランドチェックでは、各項目を1〜5点で評価しています。</p>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p><span className="font-bold text-green-600">5点：</span>仕組みとしてほぼ理想的な状態。定期的に見直している</p>
+                <p><span className="font-bold text-blue-600">4点：</span>概ねできているが、一部は属人的・場当たり的</p>
+                <p><span className="font-bold text-yellow-600">3点：</span>重要性は理解しており、一部は実行できているが、まだ仕組みとして弱い</p>
+                <p><span className="font-bold text-orange-600">2点：</span>必要だと分かっているが、ほぼ手つかず</p>
+                <p><span className="font-bold text-red-600">1点：</span>ほとんど取り組めていない／知らないに近い</p>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-yellow-800 mb-3">⚠️ スコアについての重要な注意事項</h3>
+              <ul className="space-y-2 text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 mt-1">•</span>
+                  <span>このスコアは回答者の実感値を反映しています。絶対的な数値ではなく、現時点での主観的な評価である点にご留意ください。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 mt-1">•</span>
+                  <span>社内でより多くの方にご回答いただくことで、スコアの信頼性が相対的に向上します。可能であれば、経営陣・マネジメント層・現場メンバーなど、複数の立場からの回答を集めることを推奨します。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 mt-1">•</span>
+                  <span>このレポートは「現状の認識」を可視化するツールであり、定期的に測定することで、ブランド強化の進捗を追跡できます。</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
           {/* 基本情報 */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">基本情報</h2>
@@ -499,10 +533,10 @@ const avgScore = Number(
 
               {/* 矛盾検知 */}
               {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
-                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">⚠️</span> 矛盾検知
-                  </h3>
+  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
+    <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
+      <span className="text-2xl">⚠️</span> スコアのギャップ（強みとボトルネックのねじれ）
+    </h3>
                   <ul className="space-y-2">
                     {displayAnalysis.contradictions.map((item: string, i: number) => (
                       <li key={i} className="flex items-start gap-3">
@@ -701,7 +735,55 @@ const avgScore = Number(
             </div>
           )}
 
+{/* レポートの使い方と次のステップ */}
+          {displayAnalysis && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-lg p-8 mt-8">
+              <h2 className="text-2xl font-bold text-blue-700 mb-6">📖 このレポートの活用方法</h2>
+              
+              <div className="space-y-6 mb-8">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">✅ 社内共有</h3>
+                  <p className="text-gray-700">このレポートを経営陣・マネジメント層で共有し、「ブランド強化の優先順位」を合意形成するための材料としてご活用ください。</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">✅ 部門別アクション</h3>
+                  <p className="text-gray-700">ボトルネックTOP3を各部門（営業・マーケ・人事）に割り振り、具体的な改善プロジェクトに落とし込んでください。</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">✅ 定期測定</h3>
+                  <p className="text-gray-700">6か月後に再度Brand Checkを実施し、スコアの変化を追跡することで、ブランド強化の効果を可視化できます。</p>
+                </div>
+              </div>
 
+              <div className="bg-white rounded-lg p-6 border-2 border-purple-200">
+                <h3 className="text-xl font-bold text-purple-700 mb-4">💡 次の一歩：HUVのサポートメニュー</h3>
+                <p className="text-gray-700 mb-4">ブランド戦略をさらに深めたい方へ、以下のサポートをご用意しています：</p>
+                
+                <div className="space-y-3">
+                  <div className="bg-purple-50 rounded p-3">
+                    <p className="font-semibold text-purple-900">【壁打ちセッション】</p>
+                    <p className="text-sm text-gray-700">このレポートをもとに、貴社の課題を60分で整理するオンライン相談</p>
+                  </div>
+                  <div className="bg-purple-50 rounded p-3">
+                    <p className="font-semibold text-purple-900">【BEナビ（ブランド戦略伴走支援）】</p>
+                    <p className="text-sm text-gray-700">6か月間のブランド構築プロジェクトを、月次ミーティングで伴走</p>
+                  </div>
+                  <div className="bg-purple-50 rounded p-3">
+                    <p className="font-semibold text-purple-900">【カスタムワークショップ】</p>
+                    <p className="text-sm text-gray-700">社内でのターゲット定義・価値提案ワークショップの設計・ファシリテーション</p>
+                  </div>
+                </div>
+
+                <p className="text-center mt-6 text-gray-700">
+                  ご興味のある方は、
+                  <a href="mailto:huvdesignoffice@gmail.com" className="text-purple-600 font-semibold hover:text-purple-800 underline ml-1">
+                    huvdesignoffice@gmail.com
+                  </a>
+                  までお気軽にお問い合わせください。
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* フッター */}
           <div className="text-center text-gray-600 text-sm mt-12">
