@@ -10,6 +10,34 @@ import Image from "next/image";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 type AIReport = {
+  // 新形式
+  layerAnalysis?: {
+    strategy: { avg: number; comment: string };
+    execution: { avg: number; comment: string };
+    outcome: { avg: number; comment: string };
+    balance: string;
+  };
+  phaseGuide?: string;
+  scoreGaps?: string[];
+  top3Strengths?: Array<{
+    rank: number;
+    item: string;
+    score: number;
+    advice: string;
+  }>;
+  top3Bottlenecks?: Array<{
+    rank: number;
+    item: string;
+    score: number;
+    advice: string;
+  }>;
+  roadmap?: {
+    months1to2: string[];
+    months3to4: string[];
+    months5to6: string[];
+    summary: string;
+  };
+  // 旧形式（後方互換性のため残す）
   overallComment: string;
   contradictions: string[];
   priorityActions: string[];
@@ -469,6 +497,52 @@ const avgScore = Number(
             </div>
           </div>
 
+{/* レイヤー別スコア分析 */}
+          {displayAnalysis?.layerAnalysis && (
+            <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">📈 レイヤー別スコア分析</h2>
+              
+              <p className="text-gray-700 mb-6">貴社のブランド構築状況を3つのレイヤーで分析しました：</p>
+
+              <div className="space-y-6">
+                {/* 戦略レイヤー */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-blue-900">【戦略レイヤー】</h3>
+                    <span className="text-2xl font-bold text-blue-700">{displayAnalysis.layerAnalysis.strategy.avg}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">市場理解、競合分析、自社分析、価値提案、独自性（Q1〜Q5）</p>
+                  <p className="text-gray-800">{displayAnalysis.layerAnalysis.strategy.comment}</p>
+                </div>
+
+                {/* 実行レイヤー */}
+                <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-green-900">【実行レイヤー】</h3>
+                    <span className="text-2xl font-bold text-green-700">{displayAnalysis.layerAnalysis.execution.avg}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">商品・サービス、コミュニケーション、インナーブランディング、KPI運用（Q6〜Q9）</p>
+                  <p className="text-gray-800">{displayAnalysis.layerAnalysis.execution.comment}</p>
+                </div>
+
+                {/* 成果レイヤー */}
+                <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-purple-900">【成果レイヤー】</h3>
+                    <span className="text-2xl font-bold text-purple-700">{displayAnalysis.layerAnalysis.outcome.avg}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">成果実感、知的保護、今後の方向性（Q10〜Q12）</p>
+                  <p className="text-gray-800">{displayAnalysis.layerAnalysis.outcome.comment}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                <h4 className="font-bold text-gray-900 mb-2">💡 レイヤー間のバランス</h4>
+                <p className="text-gray-700">{displayAnalysis.layerAnalysis.balance}</p>
+              </div>
+            </div>
+          )}
+
           {/* 詳細スコア */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">項目別スコア</h2>
@@ -505,6 +579,14 @@ const avgScore = Number(
             </div>
           </div>
 
+ {/* フェーズ別読み方ガイド */}
+          {displayAnalysis?.phaseGuide && (
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl shadow-lg p-8 mb-8">
+              <h2 className="text-2xl font-bold text-indigo-700 mb-4">💡 {result.business_phase}における診断結果の読み方</h2>
+              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{displayAnalysis.phaseGuide}</p>
+            </div>
+          )}
+
           {/* AI分析レポート */}
           {displayAnalysis && (
             <div className="space-y-6">
@@ -530,6 +612,60 @@ const avgScore = Number(
                   </p>
                 )}
               </div>
+
+              {/* 強みTOP3 */}
+              {displayAnalysis?.top3Strengths && displayAnalysis.top3Strengths.length > 0 && (
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">✨</span> 強みTOP3（対外的に打ち出すべき"推しポイント"）
+                  </h3>
+                  <div className="space-y-4">
+                    {displayAnalysis.top3Strengths.map((strength, i) => (
+                      <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                        <div className="flex items-start gap-3">
+                          <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {strength.rank}位
+                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
+                              <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
+                            </div>
+                            <p className="text-gray-700">{strength.advice}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ボトルネックTOP3 */}
+              {displayAnalysis?.top3Bottlenecks && displayAnalysis.top3Bottlenecks.length > 0 && (
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🔧</span> ボトルネックTOP3（今後6か月で優先改善すべきテーマ）
+                  </h3>
+                  <div className="space-y-4">
+                    {displayAnalysis.top3Bottlenecks.map((bottleneck, i) => (
+                      <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                        <div className="flex items-start gap-3">
+                          <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {bottleneck.rank}位
+                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
+                              <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
+                            </div>
+                            <p className="text-gray-700">{bottleneck.advice}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 矛盾検知 */}
               {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
@@ -685,8 +821,63 @@ const avgScore = Number(
                 </div>
               )}
 
-              {/* 成功への道筋 */}
-              {displayAnalysis.successPath && displayAnalysis.successPath.length > 0 && (
+             {/* 6か月アクションロードマップ */}
+              {displayAnalysis?.roadmap && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🎯</span> 6か月アクションロードマップ
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    {/* 1-2ヶ月目 */}
+                    <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                      <h4 className="font-bold text-blue-900 mb-3">【1〜2か月目：基盤固め】</h4>
+                      <ul className="space-y-2">
+                        {displayAnalysis.roadmap.months1to2.map((action: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-1">•</span>
+                            <span className="text-gray-700">{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* 3-4ヶ月目 */}
+                    <div className="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
+                      <h4 className="font-bold text-indigo-900 mb-3">【3〜4か月目：実行準備】</h4>
+                      <ul className="space-y-2">
+                        {displayAnalysis.roadmap.months3to4.map((action: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-indigo-500 mt-1">•</span>
+                            <span className="text-gray-700">{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* 5-6ヶ月目 */}
+                    <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
+                      <h4 className="font-bold text-purple-900 mb-3">【5〜6か月目：成果検証】</h4>
+                      <ul className="space-y-2">
+                        {displayAnalysis.roadmap.months5to6.map((action: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-purple-500 mt-1">•</span>
+                            <span className="text-gray-700">{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 bg-blue-100 rounded-lg p-4">
+                    <h4 className="font-bold text-blue-900 mb-2">💡 ロードマップのポイント</h4>
+                    <p className="text-gray-800">{displayAnalysis.roadmap.summary}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 旧形式の成功への道筋（後方互換性のため残す） */}
+              {!displayAnalysis?.roadmap && displayAnalysis?.successPath && displayAnalysis.successPath.length > 0 && (
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
                   <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
                     <span className="text-2xl">🎯</span> 成功への道筋
