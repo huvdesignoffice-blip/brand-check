@@ -317,7 +317,7 @@ ${memo || '記載なし'}
       'weaknesses', 
       'recommendations', 
       'successPath', 
-      'phaseAdvice'
+      'phaseGuide'
     ];
 
     const missingFields = requiredFields.filter(field => !(field in aiReport));
