@@ -42,6 +42,29 @@ export async function POST(request: NextRequest) {
 
     const avgScore = (scores.reduce((a: number, b: number) => a + b, 0) / 12).toFixed(1);
 
+// レイヤー別平均スコアの算出
+    const strategyAvg = (scores.slice(0, 5).reduce((a: number, b: number) => a + b, 0) / 5).toFixed(1);
+    const executionAvg = (scores.slice(5, 9).reduce((a: number, b: number) => a + b, 0) / 4).toFixed(1);
+    const outcomeAvg = (scores.slice(9, 12).reduce((a: number, b: number) => a + b, 0) / 3).toFixed(1);
+
+    console.log("Layer Averages:", { strategyAvg, executionAvg, outcomeAvg });
+
+    // 強みTOP3／ボトルネックTOP3の抽出
+    const scoredItems = scores.map((score: number, idx: number) => ({
+      label: QUESTIONS[idx].label,
+      description: QUESTIONS[idx].description,
+      score: score
+    }));
+
+    // スコア順にソート
+    const sortedByScore = [...scoredItems].sort((a, b) => b.score - a.score);
+
+    const top3 = sortedByScore.slice(0, 3);
+    const bottom3 = sortedByScore.slice(-3).reverse(); // 昇順にするため反転
+
+    console.log("Top 3 Strengths:", top3);
+    console.log("Top 3 Bottlenecks:", bottom3);
+
     // Claude APIクライアント初期化
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -59,6 +82,23 @@ ${scoreDetails}
 
 平均スコア: ${avgScore}/5.0
 
+【レイヤー別平均スコア】
+戦略レイヤー（Q1-Q5）: ${strategyAvg}/5.0
+実行レイヤー（Q6-Q9）: ${executionAvg}/5.0
+成果レイヤー（Q10-Q12）: ${outcomeAvg}/5.0
+
+【強みTOP3】
+1位: ${top3[0].label}（${top3[0].score}点）
+2位: ${top3[1].label}（${top3[1].score}点）
+3位: ${top3[2].label}（${top3[2].score}点）
+
+【ボトルネックTOP3】
+1位: ${bottom3[0].label}（${bottom3[0].score}点）
+2位: ${bottom3[1].label}（${bottom3[1].score}点）
+3位: ${bottom3[2].label}（${bottom3[2].score}点）
+
+【現状の課題・将来の展望】
+
 【現状の課題・将来の展望】
 ${memo || '記載なし'}
 
@@ -66,30 +106,136 @@ ${memo || '記載なし'}
 
 以下の形式の**純粋なJSON**で、詳細な分析レポートを作成してください。
 
-重要: 
+重要:
 - マークダウン記法（\`\`\`json など）は使用しないでください
 - JSON形式のみを出力してください
 - 説明文は一切不要です
 
 {
-  "overallComment": "総合評価のコメント（200-300文字程度で、現状の総合的な評価と特徴を記述）",
-  "contradictions": ["矛盾点1", "矛盾点2"],
-  "priorityActions": ["最優先アクション1", "最優先アクション2", "最優先アクション3"],
-  "strengths": ["強み1", "強み2", "強み3"],
-  "weaknesses": ["改善が必要な領域1", "改善が必要な領域2", "改善が必要な領域3"],
-  "recommendations": ["具体的な改善提案1", "具体的な改善提案2", "具体的な改善提案3", "具体的な改善提案4"],
-  "successPath": ["成功への道筋ステップ1", "成功への道筋ステップ2", "成功への道筋ステップ3"],
-  "phaseAdvice": "${businessPhase}フェーズに特化したアドバイス（100-150文字程度）"
+  "layerAnalysis": {
+    "strategy": {
+      "avg": ${strategyAvg},
+      "comment": "戦略レイヤーの状態を50-80文字でコメント。相対的に強い/弱いを明記"
+    },
+    "execution": {
+      "avg": ${executionAvg},
+      "comment": "実行レイヤーの状態を50-80文字でコメント。相対的に強い/弱いを明記"
+    },
+    "outcome": {
+      "avg": ${outcomeAvg},
+      "comment": "成果レイヤーの状態を50-80文字でコメント。${businessPhase === '構想中' ? '構想中フェーズのため参考値である旨を必ず明記' : '相対的に強い/弱いを明記'}"
+    },
+    "balance": "3つのレイヤースコアを比較し、バランスの良し悪しを80-120文字でコメント"
+  },
+  "phaseGuide": "${businessPhase}フェーズにおける診断結果の読み方を150-200文字で説明。${businessPhase === '構想中' ? 'このフェーズでは戦略レイヤー（Q1-Q5）の精度向上が最優先。成果レイヤー（Q10-Q12）は参考値として扱い、市場理解・競合分析・価値提案の明確化に集中すべきと説明' : businessPhase === '立ち上げ（1〜3年）' ? '戦略の実行に移るフェーズ。実行レイヤー（Q6-Q9）が戦略レイヤーに追いついているかが重要。コミュニケーションの一貫性とインナーブランディングに注力すべきと説明' : '成果レイヤー（Q10-Q12）が戦略・実行に見合っているかを確認。KPI運用と知的保護を強化し、ブランド資産としての価値を最大化するフェーズと説明'}",
+  "overallComment": "総合評価を200-300文字で記述。レイヤー別スコア、事業フェーズとの整合性、現状の課題への言及を含める",
+  "scoreGaps": [
+    "スコアギャップ1: [項目A]は高いが[項目B]は低い → これは「〇〇の状態」 → 優先アクションは「〇〇」",
+    "スコアギャップ2: 同様の構造で記述（ギャップがない場合は空配列）"
+  ],
+  "top3Strengths": [
+    {
+      "rank": 1,
+      "item": "${top3[0].label}",
+      "score": ${top3[0].score},
+      "advice": "この強みをどう対外的に打ち出すべきか、30-50文字"
+    },
+    {
+      "rank": 2,
+      "item": "${top3[1].label}",
+      "score": ${top3[1].score},
+      "advice": "この強みをどう対外的に打ち出すべきか、30-50文字"
+    },
+    {
+      "rank": 3,
+      "item": "${top3[2].label}",
+      "score": ${top3[2].score},
+      "advice": "この強みをどう対外的に打ち出すべきか、30-50文字"
+    }
+  ],
+  "top3Bottlenecks": [
+    {
+      "rank": 1,
+      "item": "${bottom3[0].label}",
+      "score": ${bottom3[0].score},
+      "advice": "なぜこれが最優先か、どう改善すべきか、30-50文字"
+    },
+    {
+      "rank": 2,
+      "item": "${bottom3[1].label}",
+      "score": ${bottom3[1].score},
+      "advice": "なぜこれが優先か、どう改善すべきか、30-50文字"
+    },
+    {
+      "rank": 3,
+      "item": "${bottom3[2].label}",
+      "score": ${bottom3[2].score},
+      "advice": "なぜこれが優先か、どう改善すべきか、30-50文字"
+    }
+  ],
+  "roadmap": {
+    "months1to2": [
+      "具体的アクション1（例：ターゲット顧客の再定義ワークショップ実施）",
+      "具体的アクション2（例：競合3社の強み・弱みマップ作成）"
+    ],
+    "months3to4": [
+      "具体的アクション3（例：Web・営業資料のメッセージ統一化）",
+      "具体的アクション4（例：ブランドガイドライン初版の作成）"
+    ],
+    "months5to6": [
+      "具体的アクション5（例：KPIダッシュボードの構築と初回測定）",
+      "具体的アクション6（例：社内ブランド勉強会の定例化）"
+    ],
+    "summary": "このロードマップで何が変わるか、期待効果を80-120文字で記述"
+  },
+  "contradictions": [],
+  "priorityActions": [],
+  "strengths": [],
+  "weaknesses": [],
+  "recommendations": [],
+  "successPath": []
 }
 
 【分析のポイント】
-1. contradictions: スコア間の矛盾を検出（例：市場理解は高いが競合分析が低い、など）。矛盾がない場合は空配列。
-2. priorityActions: 緊急度が高い順に3つの優先アクション
-3. strengths: スコアが4以上の項目を中心に強みを明確化
-4. weaknesses: スコアが3以下の項目を中心に改善領域を指摘
-5. recommendations: 具体的で実行可能な改善策を4つ提案
-6. successPath: 3-6ヶ月で取り組むべき具体的なステップを時系列で提示
-7. phaseAdvice: 事業フェーズ（構想中・売り出し中・成長中・見直し中）に応じた具体的なアドバイス
+
+1. **layerAnalysis（レイヤー別分析）**
+   - 各レイヤーの平均スコアはすでに計算済み
+   - commentでは相対的な強弱を明記すること
+   - 構想中フェーズの場合、成果レイヤーは「参考値」と必ず明記
+   - balanceでは3レイヤーのバランスを総括
+
+2. **phaseGuide（フェーズ別読み方）**
+   - 事業フェーズに応じた診断結果の読み方を具体的に説明
+   - どのレイヤーを重視すべきかを明記
+
+3. **overallComment（総合評価）**
+   - レイヤー別スコアの特徴を必ず言及
+   - 事業フェーズとの整合性を評価
+   - memoの内容（現状の課題）にも触れる
+
+4. **scoreGaps（スコアのギャップ）**
+   - 必ず「[A]は高いが[B]は低い」→「〇〇の状態」→「〇〇を優先」の3ステップ構造
+   - 「矛盾」ではなく「ギャップ」「ねじれ」という表現を使用
+   - ギャップがない場合は空配列
+
+5. **top3Strengths / top3Bottlenecks**
+   - すでに順位・項目・スコアは確定済み
+   - adviceフィールドに具体的な活用法・改善策を記述
+
+6. **roadmap（6か月ロードマップ）**
+   - 各期間に2つずつ、計6つの具体的アクションを提示
+   - 抽象的なスローガンではなく、実務がイメージできる表現
+   - 「〇〇の再定義」「〇〇マップの作成」「〇〇の統一化」など
+   - summaryには期待効果を簡潔に
+
+7. **旧形式フィールド（後方互換性のため空で維持）**
+   - contradictions, priorityActions, strengths, weaknesses, recommendations, successPath
+   - これらは空配列として出力（既存UIが壊れないため）
+
+【トーン】
+- 経営者向けで、丁寧・具体・前向き
+- 批判的ではなく、建設的な提案
+- 専門用語を使いすぎず、実務に落とせる表現
 
 純粋なJSONのみを出力してください。`;
 
