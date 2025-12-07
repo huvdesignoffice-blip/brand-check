@@ -719,10 +719,15 @@ const avgScore = Number(
                 value={adjustedScore ?? ''}
                 onChange={(e) => {
                   const value = e.target.value ? parseInt(e.target.value) : undefined;
-                  setAdjustedScores(prev => ({
-                    ...prev,
-                    [qNum]: value
-                  }));
+                  setAdjustedScores(prev => {
+                    const updated = { ...prev };
+                    if (value === undefined) {
+                      delete updated[qNum];
+                    } else {
+                      updated[qNum] = value;
+                    }
+                    return updated as { [key: string]: number };
+                  });
                 }}
                 placeholder={`元: ${score}`}
                 className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
