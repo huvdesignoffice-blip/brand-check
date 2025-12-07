@@ -430,17 +430,7 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
       disabled={!result.ai_report}
       className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      修正スコア入力
-    </button>
-                <a
-                  href="/admin/brand-check"
-                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
-                >
-                  管理画面に戻る
-                </a>
-              </>
-           ) : (
-  <>
+      
     {Object.keys(adjustedScores).length > 0 && (
       <button
         onClick={handleSaveAdjustedScores}
