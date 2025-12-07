@@ -349,6 +349,25 @@ const avgScore = Number(
   result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12)
 ).toFixed(1);
 
+// 修正後の平均スコアを計算
+const adjustedAvgScore = Object.keys(adjustedScores).length > 0
+  ? Number(
+      [
+        adjustedScores.q1 ?? result.q1_market_understanding,
+        adjustedScores.q2 ?? result.q2_competitive_analysis,
+        adjustedScores.q3 ?? result.q3_self_analysis,
+        adjustedScores.q4 ?? result.q4_value_proposition,
+        adjustedScores.q5 ?? result.q5_uniqueness,
+        adjustedScores.q6 ?? result.q6_product_service,
+        adjustedScores.q7 ?? result.q7_communication,
+        adjustedScores.q8 ?? result.q8_inner_branding,
+        adjustedScores.q9 ?? result.q9_kpi_management,
+        adjustedScores.q10 ?? result.q10_results,
+        adjustedScores.q11 ?? result.q11_ip_protection,
+        adjustedScores.q12 ?? result.q12_growth_intent,
+      ].reduce((a, b) => a + b, 0) / 12
+    ).toFixed(1)
+  : null;
   const chartData = QUESTIONS.map((q, index) => {
   const qNum = `q${index + 1}`;
   return {
@@ -445,12 +464,7 @@ const avgScore = Number(
                   onClick={handleSaveEdit}
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                 >
-                  レポート編集を保存
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-                >
+                 
                   キャンセル
                 </button>
               </>
@@ -563,16 +577,46 @@ const avgScore = Number(
             </div>
           )}
 
-          {/* 総合スコア */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          {/* {/* 総合スコア */}
+<div className="bg-white rounded-xl shadow-lg p-8 mb-8">
   <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
   <div className="flex items-center justify-center">
-    <div className="text-center">
-      <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
-        <p className="text-6xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
-        <p className="text-xl text-blue-100">/ 5.0</p>
-      </div>
+    {Object.keys(adjustedScores).length > 0 ? (
+      // 修正スコアがある場合：2つ並べて表示
+      <div className="flex gap-12 items-center">
+        {/* 元のスコア */}
+        <div className="text-center">
+          <p className="text-sm text-gray-600 mb-2">回答者スコア（自己評価）</p>
+          <div className="inline-block bg-gradient-to-br from-blue-500 to-blue-600 rounded-full p-6">
+            <p className="text-5xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
+            <p className="text-lg text-blue-100">/ 5.0</p>
           </div>
+        </div>
+        
+        {/* 矢印 */}
+        <div className="text-4xl text-gray-400">→</div>
+        
+        {/* 修正後のスコア */}
+        <div className="text-center">
+          <p className="text-sm text-red-600 mb-2 font-semibold">修正スコア（ヒアリング後）</p>
+          <div className="inline-block bg-gradient-to-br from-red-500 to-red-600 rounded-full p-6">
+            <p className="text-5xl font-bold text-white">{adjustedAvgScore}</p>
+            <p className="text-lg text-red-100">/ 5.0</p>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            変化: {Number(adjustedAvgScore) > Number(avgScore) ? '+' : ''}{(Number(adjustedAvgScore) - Number(avgScore)).toFixed(1)}
+          </p>
+        </div>
+      </div>
+    ) : (
+      // 修正スコアがない場合：元のスコアのみ表示
+      <div className="text-center">
+        <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
+          <p className="text-6xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
+          <p className="text-xl text-blue-100">/ 5.0</p>
+        </div>
+      </div>
+    )}
   </div>
 </div>
 
