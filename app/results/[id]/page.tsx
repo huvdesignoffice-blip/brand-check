@@ -718,12 +718,19 @@ const avgScore = Number(
                 max="5"
                 value={adjustedScore ?? ''}
                 onChange={(e) => {
-                  const value = e.target.value ? parseInt(e.target.value) : undefined;
-                  setAdjustedScores(prev => ({
-                    ...prev,
-                    [qNum]: value
-                  }));
-                }}
+  const value = e.target.value ? parseInt(e.target.value) : null;
+  if (value) {
+    setAdjustedScores(prev => ({
+      ...prev,
+      [qNum]: value
+    }));
+  } else {
+    // 空の場合は削除
+    const newScores = { ...adjustedScores };
+    delete newScores[qNum];
+    setAdjustedScores(newScores);
+  }
+}}
                 placeholder={`元: ${score}`}
                 className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
               />
