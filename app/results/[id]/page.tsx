@@ -72,6 +72,7 @@ interface SurveyResult {
   q12_growth_intent: number;
   avg_score: number;
   ai_report: AIReport | null;
+  adjusted_ai_report?: AIReport | null;
    adjusted_scores?: {  // ← この行を追加
     q1?: number;       // ← この行を追加
     q2?: number;       // ← この行を追加
@@ -180,13 +181,13 @@ const [adjustedScores, setAdjustedScores] = useState<{[key: string]: number}>({}
       // データベースを更新
       const { error: updateError } = await supabase
         .from("survey_results")
-        .update({ ai_report: aiReport })
+        .update({ adjusted_ai_report: aiReport })
         .eq("id", assessmentData.id);
 
       if (updateError) throw updateError;
 
       // 状態を更新
-      setResult((prev) => (prev ? { ...prev, ai_report: aiReport } : null));
+      setResult((prev) => prev ? { ...prev, adjusted_ai_report: aiReport, adjusted_scores: adjustedScores } : null);
     } catch (err) {
       console.error("Error generating AI report:", err);
       alert("AI分析に失敗しました: " + (err as Error).message);
@@ -791,343 +792,585 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
           )}
 
           {/* AI分析レポート */}
-          {displayAnalysis && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-blue-600 mb-6 border-b-2 border-blue-200 pb-2">
-                AI分析レポート
-              </h2>
+{displayAnalysis && (
+  <div className="space-y-6">
+    <h2 className="text-2xl font-bold text-blue-600 mb-6 border-b-2 border-blue-200 pb-2">
+      AI分析レポート
+    </h2>
 
-              {/* 総合評価 */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
-                  <span className="text-2xl">📊</span> 総合評価
-                </h3>
-                {editMode ? (
-                  <textarea
-                    value={editedReport?.overallComment || ''}
-                    onChange={(e) => updateField('overallComment', e.target.value)}
-                    className="w-full p-4 border border-gray-300 rounded-lg"
-                    rows={6}
-                  />
-                ) : (
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {displayAnalysis.overallComment}
-                  </p>
-                )}
+    {result.adjusted_ai_report ? (
+      // 修正後レポートがある場合：2カラム表示
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 左カラム：元のレポート */}
+        <div className="space-y-6">
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-bold text-blue-800 text-center">
+              📊 回答者スコアに基づく分析（自己評価）
+            </h3>
+          </div>
+
+          {/* 総合評価 */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+              <span className="text-2xl">📊</span> 総合評価
+            </h3>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {result.ai_report?.overallComment}
+            </p>
+          </div>
+
+          {/* 強みTOP3 */}
+          {result.ai_report?.top3Strengths && result.ai_report.top3Strengths.length > 0 && (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">✨</span> 強みTOP3
+              </h3>
+              <div className="space-y-4">
+                {result.ai_report.top3Strengths.map((strength, i) => (
+                  <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                    <div className="flex items-start gap-3">
+                      <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {strength.rank}位
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
+                          <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
+                        </div>
+                        <p className="text-gray-700 text-sm">{strength.advice}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              {/* 強みTOP3 */}
-              {displayAnalysis?.top3Strengths && displayAnalysis.top3Strengths.length > 0 && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
-                  <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">✨</span> 強みTOP3（対外的に打ち出すべき"推しポイント"）
-                  </h3>
-                  <div className="space-y-4">
-                    {displayAnalysis.top3Strengths.map((strength, i) => (
-                      <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
-                        <div className="flex items-start gap-3">
-                          <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                            {strength.rank}位
-                          </span>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
-                              <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
-                            </div>
-                            <p className="text-gray-700">{strength.advice}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ボトルネックTOP3 */}
-              {displayAnalysis?.top3Bottlenecks && displayAnalysis.top3Bottlenecks.length > 0 && (
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
-                  <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🔧</span> ボトルネックTOP3（今後6か月で優先改善すべきテーマ）
-                  </h3>
-                  <div className="space-y-4">
-                    {displayAnalysis.top3Bottlenecks.map((bottleneck, i) => (
-                      <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
-                        <div className="flex items-start gap-3">
-                          <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                            {bottleneck.rank}位
-                          </span>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
-                              <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
-                            </div>
-                            <p className="text-gray-700">{bottleneck.advice}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 矛盾検知 */}
-              {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
-  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
-    <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
-      <span className="text-2xl">⚠️</span> スコアのギャップ（強みとボトルネックのねじれ）
-    </h3>
-                  <ul className="space-y-2">
-                    {displayAnalysis.contradictions.map((item: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-yellow-600 mt-1">•</span>
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.contradictions?.[i] || ''}
-                            onChange={(e) => {
-                              const newContradictions = [...(editedReport?.contradictions || [])];
-                              newContradictions[i] = e.target.value;
-                              updateField('contradictions', newContradictions);
-                            }}
-                            className="flex-1 p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="text-gray-700 flex-1">{item}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 優先アクション */}
-              {displayAnalysis.priorityActions && displayAnalysis.priorityActions.length > 0 && (
-                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
-                  </h3>
-                  <ol className="space-y-3">
-                    {displayAnalysis.priorityActions.map((action: string, i: number) => (
-                      <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
-                        <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.priorityActions?.[i] || ''}
-                            onChange={(e) => {
-                              const newActions = [...(editedReport?.priorityActions || [])];
-                              newActions[i] = e.target.value;
-                              updateField('priorityActions', newActions);
-                            }}
-                            className="flex-1 p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="leading-relaxed font-medium text-gray-800">{action}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {/* 強み */}
-              {displayAnalysis.strengths && displayAnalysis.strengths.length > 0 && (
-                <div className="bg-white rounded-lg p-6 shadow-md border border-green-200">
-                  <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">✓</span> 強み
-                  </h3>
-                  <ul className="space-y-2">
-                    {displayAnalysis.strengths.map((strength: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-green-500 text-xl mt-0.5">●</span>
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.strengths?.[i] || ''}
-                            onChange={(e) => {
-                              const newStrengths = [...(editedReport?.strengths || [])];
-                              newStrengths[i] = e.target.value;
-                              updateField('strengths', newStrengths);
-                            }}
-                            className="flex-1 p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="text-gray-700">{strength}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 改善が必要な領域 */}
-              {displayAnalysis.weaknesses && displayAnalysis.weaknesses.length > 0 && (
-                <div className="bg-white rounded-lg p-6 shadow-md border border-orange-200">
-                  <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">△</span> 改善が必要な領域
-                  </h3>
-                  <ul className="space-y-2">
-                    {displayAnalysis.weaknesses.map((weakness: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-orange-500 text-xl mt-0.5">●</span>
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.weaknesses?.[i] || ''}
-                            onChange={(e) => {
-                              const newWeaknesses = [...(editedReport?.weaknesses || [])];
-                              newWeaknesses[i] = e.target.value;
-                              updateField('weaknesses', newWeaknesses);
-                            }}
-                            className="flex-1 p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="text-gray-700">{weakness}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 具体的な改善提案 */}
-              {displayAnalysis.recommendations && displayAnalysis.recommendations.length > 0 && (
-                <div className="bg-white rounded-lg p-6 shadow-md border border-blue-200">
-                  <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">💡</span> 具体的な改善提案
-                  </h3>
-                  <ol className="space-y-3">
-                    {displayAnalysis.recommendations.map((rec: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.recommendations?.[i] || ''}
-                            onChange={(e) => {
-                              const newRecommendations = [...(editedReport?.recommendations || [])];
-                              newRecommendations[i] = e.target.value;
-                              updateField('recommendations', newRecommendations);
-                            }}
-                            className="flex-1 p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="text-gray-700 flex-1">{rec}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-             {/* 6か月アクションロードマップ */}
-              {displayAnalysis?.roadmap && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-md">
-                  <h3 className="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎯</span> 6か月アクションロードマップ
-                  </h3>
-                  
-                  <div className="space-y-6">
-                    {/* 1-2ヶ月目 */}
-                    <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
-                      <h4 className="font-bold text-blue-900 mb-3">【1〜2か月目：基盤固め】</h4>
-                      <ul className="space-y-2">
-                        {displayAnalysis.roadmap.months1to2.map((action: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="text-blue-500 mt-1">•</span>
-                            <span className="text-gray-700">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* 3-4ヶ月目 */}
-                    <div className="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
-                      <h4 className="font-bold text-indigo-900 mb-3">【3〜4か月目：実行準備】</h4>
-                      <ul className="space-y-2">
-                        {displayAnalysis.roadmap.months3to4.map((action: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="text-indigo-500 mt-1">•</span>
-                            <span className="text-gray-700">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* 5-6ヶ月目 */}
-                    <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
-                      <h4 className="font-bold text-purple-900 mb-3">【5〜6か月目：成果検証】</h4>
-                      <ul className="space-y-2">
-                        {displayAnalysis.roadmap.months5to6.map((action: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="text-purple-500 mt-1">•</span>
-                            <span className="text-gray-700">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 bg-blue-100 rounded-lg p-4">
-                    <h4 className="font-bold text-blue-900 mb-2">💡 ロードマップのポイント</h4>
-                    <p className="text-gray-800">{displayAnalysis.roadmap.summary}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 旧形式の成功への道筋（後方互換性のため残す） */}
-              {!displayAnalysis?.roadmap && displayAnalysis?.successPath && displayAnalysis.successPath.length > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
-                  <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎯</span> 成功への道筋
-                  </h3>
-                  <ul className="space-y-3">
-                    {displayAnalysis.successPath.map((path: string, i: number) => (
-                      <li key={i} className="bg-white rounded p-3 border border-green-200">
-                        {editMode ? (
-                          <textarea
-                            value={editedReport?.successPath?.[i] || ''}
-                            onChange={(e) => {
-                              const newPath = [...(editedReport?.successPath || [])];
-                              newPath[i] = e.target.value;
-                              updateField('successPath', newPath);
-                            }}
-                            className="w-full p-2 border border-gray-300 rounded"
-                            rows={2}
-                          />
-                        ) : (
-                          <span className="text-gray-800 font-medium">{path}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 事業フェーズ別アドバイス */}
-              {displayAnalysis.phaseAdvice && (
-                <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-6 shadow-md border border-purple-300">
-                  <h3 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">💡</span> {result.business_phase}フェーズのアドバイス
-                  </h3>
-                  {editMode ? (
-                    <textarea
-                      value={editedReport?.phaseAdvice || ''}
-                      onChange={(e) => updateField('phaseAdvice', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg"
-                      rows={3}
-                    />
-                  ) : (
-                    <p className="text-gray-800 leading-relaxed font-medium">{displayAnalysis.phaseAdvice}</p>
-                  )}
-                </div>
-              )}
             </div>
           )}
+
+          {/* ボトルネックTOP3 */}
+          {result.ai_report?.top3Bottlenecks && result.ai_report.top3Bottlenecks.length > 0 && (
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">🔧</span> ボトルネックTOP3
+              </h3>
+              <div className="space-y-4">
+                {result.ai_report.top3Bottlenecks.map((bottleneck, i) => (
+                  <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                    <div className="flex items-start gap-3">
+                      <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {bottleneck.rank}位
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
+                          <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
+                        </div>
+                        <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 6か月ロードマップ */}
+          {result.ai_report?.roadmap && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">🎯</span> 6か月ロードマップ
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                  <h4 className="font-bold text-blue-900 mb-2">【1〜2か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.ai_report.roadmap.months1to2.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
+                  <h4 className="font-bold text-indigo-900 mb-2">【3〜4か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.ai_report.roadmap.months3to4.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-indigo-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
+                  <h4 className="font-bold text-purple-900 mb-2">【5〜6か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.ai_report.roadmap.months5to6.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-purple-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 右カラム：修正後レポート */}
+        <div className="space-y-6">
+          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-bold text-red-800 text-center">
+              📊 修正スコアに基づく分析（ヒアリング後）
+            </h3>
+          </div>
+
+          {/* 総合評価 */}
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
+              <span className="text-2xl">📊</span> 総合評価
+            </h3>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {result.adjusted_ai_report?.overallComment}
+            </p>
+          </div>
+
+          {/* 強みTOP3 */}
+          {result.adjusted_ai_report?.top3Strengths && result.adjusted_ai_report.top3Strengths.length > 0 && (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">✨</span> 強みTOP3
+              </h3>
+              <div className="space-y-4">
+                {result.adjusted_ai_report.top3Strengths.map((strength, i) => (
+                  <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                    <div className="flex items-start gap-3">
+                      <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {strength.rank}位
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
+                          <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
+                        </div>
+                        <p className="text-gray-700 text-sm">{strength.advice}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ボトルネックTOP3 */}
+          {result.adjusted_ai_report?.top3Bottlenecks && result.adjusted_ai_report.top3Bottlenecks.length > 0 && (
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">🔧</span> ボトルネックTOP3
+              </h3>
+              <div className="space-y-4">
+                {result.adjusted_ai_report.top3Bottlenecks.map((bottleneck, i) => (
+                  <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                    <div className="flex items-start gap-3">
+                      <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {bottleneck.rank}位
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
+                          <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
+                        </div>
+                        <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 6か月ロードマップ */}
+          {result.adjusted_ai_report?.roadmap && (
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-lg p-6 shadow-md">
+              <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                <span className="text-2xl">🎯</span> 6か月ロードマップ
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
+                  <h4 className="font-bold text-red-900 mb-2">【1〜2か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.adjusted_ai_report.roadmap.months1to2.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-red-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-pink-500">
+                  <h4 className="font-bold text-pink-900 mb-2">【3〜4か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.adjusted_ai_report.roadmap.months3to4.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-pink-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-rose-500">
+                  <h4 className="font-bold text-rose-900 mb-2">【5〜6か月目】</h4>
+                  <ul className="space-y-1">
+                    {result.adjusted_ai_report.roadmap.months5to6.map((action: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-rose-500 mt-1">•</span>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : (
+      // 修正後レポートがない場合：元のレポートのみ表示（従来の表示）
+      <div className="space-y-6">
+        {/* 総合評価 */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+            <span className="text-2xl">📊</span> 総合評価
+          </h3>
+          {editMode ? (
+            <textarea
+              value={editedReport?.overallComment || ''}
+              onChange={(e) => updateField('overallComment', e.target.value)}
+              className="w-full p-4 border border-gray-300 rounded-lg"
+              rows={6}
+            />
+          ) : (
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {displayAnalysis.overallComment}
+            </p>
+          )}
+        </div>
+
+        {/* 強みTOP3 */}
+        {displayAnalysis?.top3Strengths && displayAnalysis.top3Strengths.length > 0 && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+            <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">✨</span> 強みTOP3（対外的に打ち出すべき"推しポイント"）
+            </h3>
+            <div className="space-y-4">
+              {displayAnalysis.top3Strengths.map((strength, i) => (
+                <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                  <div className="flex items-start gap-3">
+                    <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                      {strength.rank}位
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
+                        <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
+                      </div>
+                      <p className="text-gray-700">{strength.advice}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ボトルネックTOP3 */}
+        {displayAnalysis?.top3Bottlenecks && displayAnalysis.top3Bottlenecks.length > 0 && (
+          <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
+            <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🔧</span> ボトルネックTOP3（今後6か月で優先改善すべきテーマ）
+            </h3>
+            <div className="space-y-4">
+              {displayAnalysis.top3Bottlenecks.map((bottleneck, i) => (
+                <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                  <div className="flex items-start gap-3">
+                    <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                      {bottleneck.rank}位
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
+                        <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
+                      </div>
+                      <p className="text-gray-700">{bottleneck.advice}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 矛盾検知 */}
+        {displayAnalysis.contradictions && displayAnalysis.contradictions.length > 0 && (
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">⚠️</span> スコアのギャップ（強みとボトルネックのねじれ）
+            </h3>
+            <ul className="space-y-2">
+              {displayAnalysis.contradictions.map((item: string, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="text-yellow-600 mt-1">•</span>
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.contradictions?.[i] || ''}
+                      onChange={(e) => {
+                        const newContradictions = [...(editedReport?.contradictions || [])];
+                        newContradictions[i] = e.target.value;
+                        updateField('contradictions', newContradictions);
+                      }}
+                      className="flex-1 p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="text-gray-700 flex-1">{item}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 優先アクション */}
+        {displayAnalysis.priorityActions && displayAnalysis.priorityActions.length > 0 && (
+          <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🎯</span> 優先アクション（緊急度順）
+            </h3>
+            <ol className="space-y-3">
+              {displayAnalysis.priorityActions.map((action: string, i: number) => (
+                <li key={i} className="bg-white rounded p-3 border border-red-200 flex items-start gap-3">
+                  <span className="bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.priorityActions?.[i] || ''}
+                      onChange={(e) => {
+                        const newActions = [...(editedReport?.priorityActions || [])];
+                        newActions[i] = e.target.value;
+                        updateField('priorityActions', newActions);
+                      }}
+                      className="flex-1 p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="leading-relaxed font-medium text-gray-800">{action}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* 強み */}
+        {displayAnalysis.strengths && displayAnalysis.strengths.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-green-200">
+            <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
+              <span className="text-2xl">✓</span> 強み
+            </h3>
+            <ul className="space-y-2">
+              {displayAnalysis.strengths.map((strength: string, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="text-green-500 text-xl mt-0.5">●</span>
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.strengths?.[i] || ''}
+                      onChange={(e) => {
+                        const newStrengths = [...(editedReport?.strengths || [])];
+                        newStrengths[i] = e.target.value;
+                        updateField('strengths', newStrengths);
+                      }}
+                      className="flex-1 p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="text-gray-700">{strength}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 改善が必要な領域 */}
+        {displayAnalysis.weaknesses && displayAnalysis.weaknesses.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-orange-200">
+            <h3 className="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">
+              <span className="text-2xl">△</span> 改善が必要な領域
+            </h3>
+            <ul className="space-y-2">
+              {displayAnalysis.weaknesses.map((weakness: string, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="text-orange-500 text-xl mt-0.5">●</span>
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.weaknesses?.[i] || ''}
+                      onChange={(e) => {
+                        const newWeaknesses = [...(editedReport?.weaknesses || [])];
+                        newWeaknesses[i] = e.target.value;
+                        updateField('weaknesses', newWeaknesses);
+                      }}
+                      className="flex-1 p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="text-gray-700">{weakness}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 具体的な改善提案 */}
+        {displayAnalysis.recommendations && displayAnalysis.recommendations.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-blue-200">
+            <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+              <span className="text-2xl">💡</span> 具体的な改善提案
+            </h3>
+            <ol className="space-y-3">
+              {displayAnalysis.recommendations.map((rec: string, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.recommendations?.[i] || ''}
+                      onChange={(e) => {
+                        const newRecommendations = [...(editedReport?.recommendations || [])];
+                        newRecommendations[i] = e.target.value;
+                        updateField('recommendations', newRecommendations);
+                      }}
+                      className="flex-1 p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="text-gray-700 flex-1">{rec}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* 6か月アクションロードマップ */}
+        {displayAnalysis?.roadmap && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-md">
+            <h3 className="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🎯</span> 6か月アクションロードマップ
+            </h3>
+            
+            <div className="space-y-6">
+              {/* 1-2ヶ月目 */}
+              <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                <h4 className="font-bold text-blue-900 mb-3">【1〜2か月目：基盤固め】</h4>
+                <ul className="space-y-2">
+                  {displayAnalysis.roadmap.months1to2.map((action: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">•</span>
+                      <span className="text-gray-700">{action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* 3-4ヶ月目 */}
+              <div className="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
+                <h4 className="font-bold text-indigo-900 mb-3">【3〜4か月目：実行準備】</h4>
+                <ul className="space-y-2">
+                  {displayAnalysis.roadmap.months3to4.map((action: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-indigo-500 mt-1">•</span>
+                      <span className="text-gray-700">{action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* 5-6ヶ月目 */}
+              <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
+                <h4 className="font-bold text-purple-900 mb-3">【5〜6か月目：成果検証】</h4>
+                <ul className="space-y-2">
+                  {displayAnalysis.roadmap.months5to6.map((action: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-purple-500 mt-1">•</span>
+                      <span className="text-gray-700">{action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-blue-100 rounded-lg p-4">
+              <h4 className="font-bold text-blue-900 mb-2">💡 ロードマップのポイント</h4>
+              <p className="text-gray-800">{displayAnalysis.roadmap.summary}</p>
+            </div>
+          </div>
+        )}
+
+        {/* 旧形式の成功への道筋（後方互換性のため残す） */}
+        {!displayAnalysis?.roadmap && displayAnalysis?.successPath && displayAnalysis.successPath.length > 0 && (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+            <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🎯</span> 成功への道筋
+            </h3>
+            <ul className="space-y-3">
+              {displayAnalysis.successPath.map((path: string, i: number) => (
+                <li key={i} className="bg-white rounded p-3 border border-green-200">
+                  {editMode ? (
+                    <textarea
+                      value={editedReport?.successPath?.[i] || ''}
+                      onChange={(e) => {
+                        const newPath = [...(editedReport?.successPath || [])];
+                        newPath[i] = e.target.value;
+                        updateField('successPath', newPath);
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded"
+                      rows={2}
+                    />
+                  ) : (
+                    <span className="text-gray-800 font-medium">{path}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 事業フェーズ別アドバイス */}
+        {displayAnalysis.phaseAdvice && (
+          <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-6 shadow-md border border-purple-300">
+            <h3 className="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">💡</span> {result.business_phase}フェーズのアドバイス
+            </h3>
+            {editMode ? (
+              <textarea
+                value={editedReport?.phaseAdvice || ''}
+                onChange={(e) => updateField('phaseAdvice', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                rows={3}
+              />
+            ) : (
+              <p className="text-gray-800 leading-relaxed font-medium">{displayAnalysis.phaseAdvice}</p>
+            )}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
 
 {/* レポートの使い方と次のステップ */}
           {displayAnalysis && (
