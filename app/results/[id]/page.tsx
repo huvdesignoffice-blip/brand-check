@@ -725,8 +725,7 @@ const avgScore = Number(
       [qNum]: value
     }));
   } else {
-    // 空の場合は削除
-    const newScores = { ...adjustedScores };
+     const newScores = { ...adjustedScores };
     delete newScores[qNum];
     setAdjustedScores(newScores);
   }
