@@ -72,6 +72,20 @@ interface SurveyResult {
   q12_growth_intent: number;
   avg_score: number;
   ai_report: AIReport | null;
+   adjusted_scores?: {  // ← この行を追加
+    q1?: number;       // ← この行を追加
+    q2?: number;       // ← この行を追加
+    q3?: number;       // ← この行を追加
+    q4?: number;       // ← この行を追加
+    q5?: number;       // ← この行を追加
+    q6?: number;       // ← この行を追加
+    q7?: number;       // ← この行を追加
+    q8?: number;       // ← この行を追加
+    q9?: number;       // ← この行を追加
+    q10?: number;      // ← この行を追加
+    q11?: number;      // ← この行を追加
+    q12?: number;      // ← この行を追加
+  } | null;        
 }
 
 const QUESTIONS = [
@@ -96,6 +110,7 @@ export default function ResultPage() {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedReport, setEditedReport] = useState<AIReport | null>(null);
+const [adjustedScores, setAdjustedScores] = useState<{[key: string]: number}>({}); // ← この行を追加
 
   const supabase = createClientComponentClient();
 
@@ -108,15 +123,20 @@ export default function ResultPage() {
         .single();
 
       if (error) {
-        console.error('Error fetching result:', error);
-      } else {
-        setResult(data);
-        
-        // AI レポートがない場合は自動生成
-        if (!data.ai_report) {
-          await generateAIReport(data);
-        }
-      }
+  console.error('Error fetching result:', error);
+} else {
+  setResult(data);
+  
+  // 修正スコアがあれば読み込む
+  if (data.adjusted_scores) {
+    setAdjustedScores(data.adjusted_scores);
+  }
+  
+  // AI レポートがない場合は自動生成
+  if (!data.ai_report) {
+    await generateAIReport(data);
+  }
+}
       setLoading(false);
     };
 
@@ -207,7 +227,69 @@ export default function ResultPage() {
       alert("保存に失敗しました: " + (err as Error).message);
     }
   }
+async function handleSaveAdjustedScores() {
+  if (!result) return;
 
+  try {
+    setGeneratingAI(true);
+
+    // 修正スコアをデータベースに保存
+    const { error: updateError } = await supabase
+      .from("survey_results")
+      .update({ adjusted_scores: adjustedScores })
+      .eq("id", result.id);
+
+    if (updateError) throw updateError;
+
+    // 修正スコアでAI分析を再実行
+    const scoresArray = [
+      adjustedScores.q1 ?? result.q1_market_understanding,
+      adjustedScores.q2 ?? result.q2_competitive_analysis,
+      adjustedScores.q3 ?? result.q3_self_analysis,
+      adjustedScores.q4 ?? result.q4_value_proposition,
+      adjustedScores.q5 ?? result.q5_uniqueness,
+      adjustedScores.q6 ?? result.q6_product_service,
+      adjustedScores.q7 ?? result.q7_communication,
+      adjustedScores.q8 ?? result.q8_inner_branding,
+      adjustedScores.q9 ?? result.q9_kpi_management,
+      adjustedScores.q10 ?? result.q10_results,
+      adjustedScores.q11 ?? result.q11_ip_protection,
+      adjustedScores.q12 ?? result.q12_growth_intent,
+    ];
+
+    const response = await fetch("/api/analyze-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scores: scoresArray,
+        memo: result.memo,
+        businessPhase: result.business_phase,
+        companyName: result.company_name,
+      }),
+    });
+
+    if (!response.ok) throw new Error("AI分析に失敗しました");
+
+    const aiReport = await response.json();
+
+    // AI分析結果を保存
+    const { error: aiUpdateError } = await supabase
+      .from("survey_results")
+      .update({ ai_report: aiReport })
+      .eq("id", result.id);
+
+    if (aiUpdateError) throw aiUpdateError;
+
+    // 状態を更新
+    setResult((prev) => prev ? { ...prev, ai_report: aiReport, adjusted_scores: adjustedScores } : null);
+    alert("修正スコアを保存し、AI分析を更新しました");
+  } catch (err) {
+    console.error("Error saving adjusted scores:", err);
+    alert("保存に失敗しました: " + (err as Error).message);
+  } finally {
+    setGeneratingAI(false);
+  }
+}
   async function handleResetToAI() {
     if (!result) return;
     
@@ -267,11 +349,14 @@ const avgScore = Number(
   result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12)
 ).toFixed(1);
 
-  const chartData = QUESTIONS.map((q) => ({
+  const chartData = QUESTIONS.map((q, index) => {
+  const qNum = `q${index + 1}`;
+  return {
     category: q.label,
     value: (result as any)[q.id],
-  }));
-
+    adjustedValue: adjustedScores[qNum] ?? (result as any)[q.id],
+  };
+});
   const getScoreColor = (score: number) => {
     if (score >= 4) return 'text-green-600 bg-green-50';
     if (score >= 3) return 'text-yellow-600 bg-yellow-50';
@@ -322,8 +407,20 @@ const avgScore = Number(
                   disabled={!result.ai_report}
                   className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  編集
+                  レポートを編集
                 </button>
+                <button
+      onClick={() => {
+        setEditMode(true);
+        if (result?.ai_report) {
+          setEditedReport({ ...result.ai_report });
+        }
+      }}
+      disabled={!result.ai_report}
+      className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      修正スコア入力
+    </button>
                 <a
                   href="/admin/brand-check"
                   className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
@@ -331,19 +428,33 @@ const avgScore = Number(
                   管理画面に戻る
                 </a>
               </>
-            ) : (
-              <>
-                <button
-                  onClick={handleResetToAI}
-                  className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  AI生成に戻す
-                </button>
+           ) : (
+  <>
+    {Object.keys(adjustedScores).length > 0 && (
+      <button
+        onClick={handleSaveAdjustedScores}
+        className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+      >
+        修正スコアを保存してAI再実行
+      </button>
+    )}
+    <button
+      onClick={handleSaveEdit}
+      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+    >
+      レポート編集を保存
+    </button>
+    <button
+      onClick={handleResetToAI}
+      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+    >
+      AI生成に戻す
+    </button>
                 <button
                   onClick={handleSaveEdit}
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                 >
-                  保存
+                  レポート編集を保存
                 </button>
                 <button
                   onClick={handleCancelEdit}
@@ -470,32 +581,53 @@ const avgScore = Number(
         <p className="text-6xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
         <p className="text-xl text-blue-100">/ 5.0</p>
       </div>
-      <p className={`text-2xl font-bold mt-4 px-6 py-2 rounded-full inline-block ${getScoreColor(Number(avgScore))}`}>
-        {getScoreLabel(Number(avgScore))}
-      </p>
-    </div>
+          </div>
   </div>
 </div>
 
           {/* レーダーチャート */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">スコア分布</h2>
-            <div className="flex justify-center">
-              <ResponsiveContainer width="100%" height={400}>
-                <RadarChart data={chartData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" />
-                  <PolarRadiusAxis domain={[0, 5]} />
-                  <Radar
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+<div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+  <h2 className="text-2xl font-bold text-gray-900 mb-6">スコア分布</h2>
+  {Object.keys(adjustedScores).length > 0 && (
+    <div className="mb-4 flex justify-center gap-6">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-blue-500 rounded"></div>
+        <span className="text-sm text-gray-600">回答者スコア（自己評価）</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-red-500 rounded"></div>
+        <span className="text-sm text-gray-600">修正スコア（ヒアリング後）</span>
+      </div>
+    </div>
+  )}
+  <div className="flex justify-center">
+    <ResponsiveContainer width="100%" height={400}>
+      <RadarChart data={chartData}>
+        <PolarGrid />
+        <PolarAngleAxis dataKey="category" />
+        <PolarRadiusAxis domain={[0, 5]} />
+        {/* 元のスコア（青） */}
+        <Radar
+          name="回答者スコア"
+          dataKey="value"
+          stroke="#3b82f6"
+          fill="#3b82f6"
+          fillOpacity={0.6}
+        />
+        {/* 修正スコア（赤） */}
+        {Object.keys(adjustedScores).length > 0 && (
+          <Radar
+            name="修正スコア"
+            dataKey="adjustedValue"
+            stroke="#ef4444"
+            fill="#ef4444"
+            fillOpacity={0.4}
+          />
+        )}
+      </RadarChart>
+    </ResponsiveContainer>
+  </div>
+</div>
 
 {/* レイヤー別スコア分析 */}
           {displayAnalysis?.layerAnalysis && (
@@ -549,6 +681,8 @@ const avgScore = Number(
             <div className="space-y-4">
               {QUESTIONS.map((question, index) => {
                 const score = (result as any)[question.id];
+                 const qNum = `q${index + 1}`;  // ← この行を追加
+  const adjustedScore = adjustedScores[qNum];  // ← この行を追加
                 return (
                   <div key={question.id} className="border-b border-gray-200 pb-4 last:border-b-0">
                     <div className="flex items-start justify-between mb-2">
@@ -573,11 +707,39 @@ const avgScore = Number(
                         />
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                     {editMode && (
+            <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <label className="text-sm font-semibold text-orange-700 block mb-2">
+                修正スコア（ヒアリング後）
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="5"
+                value={adjustedScore ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value) : undefined;
+                  setAdjustedScores(prev => ({
+                    ...prev,
+                    [qNum]: value
+                  }));
+                }}
+                placeholder={`元: ${score}`}
+                className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
+              />
+              {adjustedScore && adjustedScore !== score && (
+                <span className="ml-3 text-sm text-orange-600">
+                  変更: {score} → <span className="font-bold text-red-600">{adjustedScore}</span>
+                </span>
+              )}
             </div>
-          </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>
+          
 
  {/* フェーズ別読み方ガイド */}
           {displayAnalysis?.phaseGuide && (
