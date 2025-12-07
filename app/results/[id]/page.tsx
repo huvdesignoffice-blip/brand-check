@@ -403,64 +403,62 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
 
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-5xl mx-auto">
+          
           {/* ヘッダーボタン */}
-          <div className="no-print mb-6 flex justify-end gap-3">
-            {!editMode ? (
-              <>
-                <button
-                  onClick={handlePrint}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  PDF印刷
-                </button>
-                <button
-                  onClick={handleEdit}
-                  disabled={!result.ai_report}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  レポートを編集
-                </button>
-                <button
-      onClick={() => {
-        setEditMode(true);
-        if (result?.ai_report) {
-          setEditedReport({ ...result.ai_report });
-        }
-      }}
-      disabled={!result.ai_report}
-      className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      
-    {Object.keys(adjustedScores).length > 0 && (
+<div className="no-print mb-6 flex justify-end gap-3">
+  {!editMode ? (
+    <>
       <button
-        onClick={handleSaveAdjustedScores}
-        className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+        onClick={handlePrint}
+        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
       >
-        修正スコアを保存してAI再実行
+        PDF印刷
       </button>
-    )}
-    <button
-      onClick={handleSaveEdit}
-      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-    >
-      レポート編集を保存
-    </button>
-    <button
-      onClick={handleResetToAI}
-      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-    >
-      AI生成に戻す
-    </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                >
-                 
-                  キャンセル
-                </button>
-              </>
-            )}
-          </div>
+      <button
+        onClick={handleEdit}
+        disabled={!result.ai_report}
+        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        レポートを編集
+      </button>
+      <button
+        href="/admin/brand-check"
+        className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors inline-block"
+      >
+        管理画面に戻る
+      </a>
+    </>
+  ) : (
+    <>
+      {Object.keys(adjustedScores).length > 0 && (
+        <button
+          onClick={handleSaveAdjustedScores}
+          className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+        >
+          修正スコアを保存してAI再実行
+        </button>
+      )}
+      <button
+        onClick={handleSaveEdit}
+        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+      >
+        レポート編集を保存
+      </button>
+      <button
+        onClick={handleResetToAI}
+        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+      >
+        AI生成に戻す
+      </button>
+      <button
+        onClick={handleCancelEdit}
+        className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+      >
+        キャンセル
+      </button>
+    </>
+  )}
+</div>
 
           {/* ヘッダー */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg p-8 mb-8">
