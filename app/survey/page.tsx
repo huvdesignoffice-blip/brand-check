@@ -220,36 +220,53 @@ export default function SurveyPage() {
       console.log('Success! Data:', data);
 
        // AI分析を実行
-      try {
-        const aiResponse = await fetch('/api/analyze-with-ai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            resultId: data.id,
-            scores: [
-              data.q1_market_understanding,
-              data.q2_competitive_analysis,
-              data.q3_self_analysis,
-              data.q4_value_proposition,
-              data.q5_uniqueness,
-              data.q6_product_service,
-              data.q7_communication,
-              data.q8_inner_branding,
-              data.q9_kpi_management,
-              data.q10_results,
-              data.q11_ip_protection,
-              data.q12_growth_intent,
-            ],
-          }),
-        });
+      // AI分析を実行して結果を保存
+try {
+  const aiResponse = await fetch('/api/analyze-with-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      resultId: data.id,
+      scores: [
+        data.q1_market_understanding,
+        data.q2_competitive_analysis,
+        data.q3_self_analysis,
+        data.q4_value_proposition,
+        data.q5_uniqueness,
+        data.q6_product_service,
+        data.q7_communication,
+        data.q8_inner_branding,
+        data.q9_kpi_management,
+        data.q10_results,
+        data.q11_ip_protection,
+        data.q12_growth_intent,
+      ],
+      memo: data.memo,
+      businessPhase: data.business_phase,
+      companyName: data.company_name,
+    }),
+  });
 
-        if (!aiResponse.ok) {
-          console.error('AI analysis failed:', await aiResponse.text());
-        }
-      } catch (aiError) {
-        // AI分析失敗してもサーベイは完了
-        console.error('AI analysis failed:', aiError);
-      }
+  if (aiResponse.ok) {
+    const aiReport = await aiResponse.json();
+    
+    // AI分析結果をSupabaseに保存
+    const { error: updateError } = await supabase
+      .from('survey_results')
+      .update({ ai_report: aiReport })
+      .eq('id', data.id);
+
+    if (updateError) {
+      console.error('Failed to save AI report:', updateError);
+    } else {
+      console.log('AI report saved successfully');
+    }
+  } else {
+    console.error('AI analysis failed:', await aiResponse.text());
+  }
+} catch (aiError) {
+  console.error('AI analysis failed:', aiError);
+}
       // サンキューページにリダイレクト
       router.push('/thank-you');
     } catch (error) {
