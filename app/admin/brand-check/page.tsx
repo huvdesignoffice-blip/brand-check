@@ -14,6 +14,18 @@ type Assessment = {
   industry: string | null;
   business_phase: string | null;
   avg_score: number | null;
+  q1_market_understanding: number | null;
+  q2_competitive_analysis: number | null;
+  q3_self_analysis: number | null;
+  q4_value_proposition: number | null;
+  q5_uniqueness: number | null;
+  q6_product_service: number | null;
+  q7_communication: number | null;
+  q8_inner_branding: number | null;
+  q9_kpi_management: number | null;
+  q10_results: number | null;
+  q11_ip_protection: number | null;
+  q12_growth_intent: number | null;
 };
 
 type SortField = "created_at" | "company_name" | "avg_score";
@@ -182,43 +194,67 @@ export default function BrandCheckAdminPage() {
   }
 
   function exportToCSV() {
-    const headers = [
-      "作成日時",
-      "会社名",
-      "回答者名",
-      "業界",
-      "ビジネスフェーズ",
-      "平均スコア"
-    ];
+  const headers = [
+    "作成日時",
+    "会社名",
+    "回答者名",
+    "業界",
+    "ビジネスフェーズ",
+    "平均スコア",
+    "Q1_市場理解",
+    "Q2_競合分析",
+    "Q3_自社分析",
+    "Q4_価値提案",
+    "Q5_独自性",
+    "Q6_商品サービス",
+    "Q7_コミュニケーション",
+    "Q8_インナーブランディング",
+    "Q9_KPI管理",
+    "Q10_成果",
+    "Q11_知財保護",
+    "Q12_成長意欲"
+  ];
 
-    const rows = filteredAssessments.map((a) => [
-      new Date(a.created_at).toLocaleString("ja-JP"),
-      a.company_name || "-",
-      a.respondent_name || "-",
-      a.industry || "-",
-      a.business_phase || "-",
-      (a.avg_score || 0).toFixed(1)
-    ]);
+  const rows = filteredAssessments.map((a) => [
+    new Date(a.created_at).toLocaleString("ja-JP"),
+    a.company_name || "-",
+    a.respondent_name || "-",
+    a.industry || "-",
+    a.business_phase || "-",
+    (a.avg_score || 0).toFixed(1),
+    a.q1_market_understanding || "-",
+    a.q2_competitive_analysis || "-",
+    a.q3_self_analysis || "-",
+    a.q4_value_proposition || "-",
+    a.q5_uniqueness || "-",
+    a.q6_product_service || "-",
+    a.q7_communication || "-",
+    a.q8_inner_branding || "-",
+    a.q9_kpi_management || "-",
+    a.q10_results || "-",
+    a.q11_ip_protection || "-",
+    a.q12_growth_intent || "-"
+  ]);
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row.map((cell) => `"${cell}"`).join(",")
-      )
-    ].join("\n");
+  const csvContent = [
+    headers.join(","),
+    ...rows.map((row) =>
+      row.map((cell) => `"${cell}"`).join(",")
+    )
+  ].join("\n");
 
-    const bom = "\uFEFF";
-    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `brand-check-export-${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  const bom = "\uFEFF";
+  const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", `brand-check-export-${new Date().toISOString().split("T")[0]}.csv`);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
   if (loading) {
     return (
