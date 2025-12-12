@@ -111,8 +111,9 @@ export default function ResultPage() {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedReport, setEditedReport] = useState<AIReport | null>(null);
-const [adjustedScores, setAdjustedScores] = useState<{[key: string]: number}>({}); // ← この行を追加
-
+const [adjustedScores, setAdjustedScores] = useState<{[key: string]: number}>({}); 
+const [editedOriginalReport, setEditedOriginalReport] = useState<AIReport | null>(null);  // ← この行を追加
+const [editedAdjustedReport, setEditedAdjustedReport] = useState<AIReport | null>(null);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -197,37 +198,88 @@ const [adjustedScores, setAdjustedScores] = useState<{[key: string]: number}>({}
   }
 
   function handleEdit() {
-    if (result?.ai_report) {
-      setEditedReport({ ...result.ai_report });
-      setEditMode(true);
+  if (result?.ai_report) {
+    setEditedOriginalReport({ ...result.ai_report });
+    if (result.adjusted_ai_report) {
+      setEditedAdjustedReport({ ...result.adjusted_ai_report });
     }
+    setEditMode(true);
   }
+}
 
   function handleCancelEdit() {
-    setEditedReport(null);
+  setEditedOriginalReport(null);
+  setEditedAdjustedReport(null);
+  setEditMode(false);
+}
+ async function handleSaveOriginalReport() {
+  if (!editedOriginalReport || !result) return;
+
+  try {
+    const { error } = await supabase
+      .from("survey_results")
+      .update({ ai_report: editedOriginalReport })
+      .eq("id", result.id);
+
+    if (error) throw error;
+
+    setResult({ ...result, ai_report: editedOriginalReport });
+    alert("元のレポートを保存しました");
+  } catch (err) {
+    console.error("Error saving original report:", err);
+    alert("保存に失敗しました: " + (err as Error).message);
+  }
+}
+
+async function handleSaveAdjustedReportOnly() {
+  if (!editedAdjustedReport || !result) return;
+
+  try {
+    const { error } = await supabase
+      .from("survey_results")
+      .update({ adjusted_ai_report: editedAdjustedReport })
+      .eq("id", result.id);
+
+    if (error) throw error;
+
+    setResult({ ...result, adjusted_ai_report: editedAdjustedReport });
+    alert("修正後レポートを保存しました");
+  } catch (err) {
+    console.error("Error saving adjusted report:", err);
+    alert("保存に失敗しました: " + (err as Error).message);
+  }
+}
+
+async function handleSaveBothReports() {
+  if (!result) return;
+
+  try {
+    const updates: any = {};
+    if (editedOriginalReport) updates.ai_report = editedOriginalReport;
+    if (editedAdjustedReport) updates.adjusted_ai_report = editedAdjustedReport;
+
+    const { error } = await supabase
+      .from("survey_results")
+      .update(updates)
+      .eq("id", result.id);
+
+    if (error) throw error;
+
+    setResult({
+      ...result,
+      ...(editedOriginalReport && { ai_report: editedOriginalReport }),
+      ...(editedAdjustedReport && { adjusted_ai_report: editedAdjustedReport })
+    });
+    
     setEditMode(false);
+    setEditedOriginalReport(null);
+    setEditedAdjustedReport(null);
+    alert("両方のレポートを保存しました");
+  } catch (err) {
+    console.error("Error saving reports:", err);
+    alert("保存に失敗しました: " + (err as Error).message);
   }
-
-  async function handleSaveEdit() {
-    if (!editedReport || !result) return;
-
-    try {
-      const { error } = await supabase
-        .from("survey_results")
-        .update({ ai_report: editedReport })
-        .eq("id", result.id);
-
-      if (error) throw error;
-
-      setResult({ ...result, ai_report: editedReport });
-      setEditMode(false);
-      setEditedReport(null);
-      alert("レポートを保存しました");
-    } catch (err) {
-      console.error("Error saving report:", err);
-      alert("保存に失敗しました: " + (err as Error).message);
-    }
-  }
+}
 async function handleSaveAdjustedScores() {
   if (!result) return;
 
@@ -307,6 +359,18 @@ async function handleSaveAdjustedScores() {
       setEditedReport({ ...editedReport, [field]: value });
     }
   }
+
+  function updateOriginalField(field: keyof AIReport, value: any) {
+  if (editedOriginalReport) {
+    setEditedOriginalReport({ ...editedOriginalReport, [field]: value });
+  }
+}
+
+function updateAdjustedField(field: keyof AIReport, value: any) {
+  if (editedAdjustedReport) {
+    setEditedAdjustedReport({ ...editedAdjustedReport, [field]: value });
+  }
+}
 
   function handlePrint() {
     window.print();
@@ -428,36 +492,55 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
   管理画面に戻る
 </a>
     </>
-  ) : (
-    <>
-      {Object.keys(adjustedScores).length > 0 && (
-        <button
-          onClick={handleSaveAdjustedScores}
-          className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
-        >
-          修正スコアを保存してAI再実行
-        </button>
-      )}
+ ) : (
+  <>
+    {Object.keys(adjustedScores).length > 0 && (
       <button
-        onClick={handleSaveEdit}
-        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+        onClick={handleSaveAdjustedScores}
+        className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
       >
-        レポート編集を保存
+        修正スコアを保存してAI再実行
       </button>
+    )}
+    <button
+      onClick={handleSaveOriginalReport}
+      disabled={!editedOriginalReport}
+      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+    >
+      元のレポートを保存
+    </button>
+    {result.adjusted_ai_report && (
       <button
-        onClick={handleResetToAI}
-        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+        onClick={handleSaveAdjustedReportOnly}
+        disabled={!editedAdjustedReport}
+        className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
       >
-        AI生成に戻す
+        修正後レポートを保存
       </button>
+    )}
+    {result.adjusted_ai_report && (
       <button
-        onClick={handleCancelEdit}
-        className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+        onClick={handleSaveBothReports}
+        disabled={!editedOriginalReport && !editedAdjustedReport}
+        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
       >
-        キャンセル
+        両方のレポートを保存
       </button>
-    </>
-  )}
+    )}
+    <button
+      onClick={handleResetToAI}
+      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+    >
+      AI生成に戻す
+    </button>
+    <button
+      onClick={handleCancelEdit}
+      className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+    >
+      キャンセル
+    </button>
+  </>
+)}
 </div>
 
           {/* ヘッダー */}
@@ -802,19 +885,28 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
             <h3 className="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
               <span className="text-2xl">📊</span> 総合評価
             </h3>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {result.ai_report?.overallComment}
-            </p>
+            {editMode && editedOriginalReport ? (
+              <textarea
+                value={editedOriginalReport.overallComment || ''}
+                onChange={(e) => updateOriginalField('overallComment', e.target.value)}
+                className="w-full p-4 border border-blue-300 rounded-lg"
+                rows={6}
+              />
+            ) : (
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {result.ai_report?.overallComment}
+              </p>
+            )}
           </div>
 
           {/* 強みTOP3 */}
-          {result.ai_report?.top3Strengths && result.ai_report.top3Strengths.length > 0 && (
+          {(editMode && editedOriginalReport?.top3Strengths ? editedOriginalReport.top3Strengths : result.ai_report?.top3Strengths) && (
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">✨</span> 強みTOP3
               </h3>
               <div className="space-y-4">
-                {result.ai_report.top3Strengths.map((strength, i) => (
+                {(editMode && editedOriginalReport?.top3Strengths ? editedOriginalReport.top3Strengths : result.ai_report?.top3Strengths || []).map((strength, i) => (
                   <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
                     <div className="flex items-start gap-3">
                       <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -825,7 +917,20 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
                           <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
                           <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
                         </div>
-                        <p className="text-gray-700 text-sm">{strength.advice}</p>
+                        {editMode && editedOriginalReport ? (
+                          <textarea
+                            value={strength.advice || ''}
+                            onChange={(e) => {
+                              const newStrengths = [...(editedOriginalReport.top3Strengths || [])];
+                              newStrengths[i] = { ...newStrengths[i], advice: e.target.value };
+                              updateOriginalField('top3Strengths', newStrengths);
+                            }}
+                            className="w-full p-2 border border-green-300 rounded text-sm"
+                            rows={2}
+                          />
+                        ) : (
+                          <p className="text-gray-700 text-sm">{strength.advice}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -835,13 +940,13 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
           )}
 
           {/* ボトルネックTOP3 */}
-          {result.ai_report?.top3Bottlenecks && result.ai_report.top3Bottlenecks.length > 0 && (
+          {(editMode && editedOriginalReport?.top3Bottlenecks ? editedOriginalReport.top3Bottlenecks : result.ai_report?.top3Bottlenecks) && (
             <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">🔧</span> ボトルネックTOP3
               </h3>
               <div className="space-y-4">
-                {result.ai_report.top3Bottlenecks.map((bottleneck, i) => (
+                {(editMode && editedOriginalReport?.top3Bottlenecks ? editedOriginalReport.top3Bottlenecks : result.ai_report?.top3Bottlenecks || []).map((bottleneck, i) => (
                   <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
                     <div className="flex items-start gap-3">
                       <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -852,7 +957,20 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
                           <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
                           <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
                         </div>
-                        <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                        {editMode && editedOriginalReport ? (
+                          <textarea
+                            value={bottleneck.advice || ''}
+                            onChange={(e) => {
+                              const newBottlenecks = [...(editedOriginalReport.top3Bottlenecks || [])];
+                              newBottlenecks[i] = { ...newBottlenecks[i], advice: e.target.value };
+                              updateOriginalField('top3Bottlenecks', newBottlenecks);
+                            }}
+                            className="w-full p-2 border border-orange-300 rounded text-sm"
+                            rows={2}
+                          />
+                        ) : (
+                          <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -862,7 +980,7 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
           )}
 
           {/* 6か月ロードマップ */}
-          {result.ai_report?.roadmap && (
+          {(editMode && editedOriginalReport?.roadmap ? editedOriginalReport.roadmap : result.ai_report?.roadmap) && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-blue-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">🎯</span> 6か月ロードマップ
@@ -870,37 +988,93 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
               <div className="space-y-4">
                 <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
                   <h4 className="font-bold text-blue-900 mb-2">【1〜2か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.ai_report.roadmap.months1to2.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-blue-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedOriginalReport ? (
+                    <textarea
+                      value={editedOriginalReport.roadmap?.months1to2.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedOriginalReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months1to2 = e.target.value.split('\n');
+                        updateOriginalField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-blue-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.ai_report?.roadmap?.months1to2 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-blue-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
                   <h4 className="font-bold text-indigo-900 mb-2">【3〜4か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.ai_report.roadmap.months3to4.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-indigo-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedOriginalReport ? (
+                    <textarea
+                      value={editedOriginalReport.roadmap?.months3to4.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedOriginalReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months3to4 = e.target.value.split('\n');
+                        updateOriginalField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-indigo-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.ai_report?.roadmap?.months3to4 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-indigo-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-purple-500">
                   <h4 className="font-bold text-purple-900 mb-2">【5〜6か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.ai_report.roadmap.months5to6.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-purple-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedOriginalReport ? (
+                    <textarea
+                      value={editedOriginalReport.roadmap?.months5to6.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedOriginalReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months5to6 = e.target.value.split('\n');
+                        updateOriginalField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-purple-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.ai_report?.roadmap?.months5to6 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-purple-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
+              </div>
+              <div className="mt-4 bg-blue-100 rounded-lg p-4">
+                <h4 className="font-bold text-blue-900 mb-2">💡 ロードマップのポイント</h4>
+                {editMode && editedOriginalReport ? (
+                  <textarea
+                    value={editedOriginalReport.roadmap?.summary || ''}
+                    onChange={(e) => {
+                      const newRoadmap = { ...(editedOriginalReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                      newRoadmap.summary = e.target.value;
+                      updateOriginalField('roadmap', newRoadmap);
+                    }}
+                    className="w-full p-2 border border-blue-300 rounded text-sm"
+                    rows={2}
+                  />
+                ) : (
+                  <p className="text-gray-800 text-sm">{result.ai_report?.roadmap?.summary}</p>
+                )}
               </div>
             </div>
           )}
@@ -919,19 +1093,28 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
             <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
               <span className="text-2xl">📊</span> 総合評価
             </h3>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {result.adjusted_ai_report?.overallComment}
-            </p>
+            {editMode && editedAdjustedReport ? (
+              <textarea
+                value={editedAdjustedReport.overallComment || ''}
+                onChange={(e) => updateAdjustedField('overallComment', e.target.value)}
+                className="w-full p-4 border border-red-300 rounded-lg"
+                rows={6}
+              />
+            ) : (
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {result.adjusted_ai_report?.overallComment}
+              </p>
+            )}
           </div>
 
           {/* 強みTOP3 */}
-          {result.adjusted_ai_report?.top3Strengths && result.adjusted_ai_report.top3Strengths.length > 0 && (
+          {(editMode && editedAdjustedReport?.top3Strengths ? editedAdjustedReport.top3Strengths : result.adjusted_ai_report?.top3Strengths) && (
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">✨</span> 強みTOP3
               </h3>
               <div className="space-y-4">
-                {result.adjusted_ai_report.top3Strengths.map((strength, i) => (
+                {(editMode && editedAdjustedReport?.top3Strengths ? editedAdjustedReport.top3Strengths : result.adjusted_ai_report?.top3Strengths || []).map((strength, i) => (
                   <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-green-500">
                     <div className="flex items-start gap-3">
                       <span className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -942,7 +1125,20 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
                           <span className="font-bold text-gray-900 text-lg">{strength.item}</span>
                           <span className="text-green-600 font-bold text-xl">({strength.score}点)</span>
                         </div>
-                        <p className="text-gray-700 text-sm">{strength.advice}</p>
+                        {editMode && editedAdjustedReport ? (
+                          <textarea
+                            value={strength.advice || ''}
+                            onChange={(e) => {
+                              const newStrengths = [...(editedAdjustedReport.top3Strengths || [])];
+                              newStrengths[i] = { ...newStrengths[i], advice: e.target.value };
+                              updateAdjustedField('top3Strengths', newStrengths);
+                            }}
+                            className="w-full p-2 border border-green-300 rounded text-sm"
+                            rows={2}
+                          />
+                        ) : (
+                          <p className="text-gray-700 text-sm">{strength.advice}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -952,13 +1148,13 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
           )}
 
           {/* ボトルネックTOP3 */}
-          {result.adjusted_ai_report?.top3Bottlenecks && result.adjusted_ai_report.top3Bottlenecks.length > 0 && (
+          {(editMode && editedAdjustedReport?.top3Bottlenecks ? editedAdjustedReport.top3Bottlenecks : result.adjusted_ai_report?.top3Bottlenecks) && (
             <div className="bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">🔧</span> ボトルネックTOP3
               </h3>
               <div className="space-y-4">
-                {result.adjusted_ai_report.top3Bottlenecks.map((bottleneck, i) => (
+                {(editMode && editedAdjustedReport?.top3Bottlenecks ? editedAdjustedReport.top3Bottlenecks : result.adjusted_ai_report?.top3Bottlenecks || []).map((bottleneck, i) => (
                   <div key={i} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
                     <div className="flex items-start gap-3">
                       <span className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -969,7 +1165,20 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
                           <span className="font-bold text-gray-900 text-lg">{bottleneck.item}</span>
                           <span className="text-orange-600 font-bold text-xl">({bottleneck.score}点)</span>
                         </div>
-                        <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                        {editMode && editedAdjustedReport ? (
+                          <textarea
+                            value={bottleneck.advice || ''}
+                            onChange={(e) => {
+                              const newBottlenecks = [...(editedAdjustedReport.top3Bottlenecks || [])];
+                              newBottlenecks[i] = { ...newBottlenecks[i], advice: e.target.value };
+                              updateAdjustedField('top3Bottlenecks', newBottlenecks);
+                            }}
+                            className="w-full p-2 border border-orange-300 rounded text-sm"
+                            rows={2}
+                          />
+                        ) : (
+                          <p className="text-gray-700 text-sm">{bottleneck.advice}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -979,7 +1188,7 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
           )}
 
           {/* 6か月ロードマップ */}
-          {result.adjusted_ai_report?.roadmap && (
+          {(editMode && editedAdjustedReport?.roadmap ? editedAdjustedReport.roadmap : result.adjusted_ai_report?.roadmap) && (
             <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-lg p-6 shadow-md">
               <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
                 <span className="text-2xl">🎯</span> 6か月ロードマップ
@@ -987,37 +1196,93 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
               <div className="space-y-4">
                 <div className="bg-white rounded-lg p-4 border-l-4 border-red-500">
                   <h4 className="font-bold text-red-900 mb-2">【1〜2か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.adjusted_ai_report.roadmap.months1to2.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-red-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedAdjustedReport ? (
+                    <textarea
+                      value={editedAdjustedReport.roadmap?.months1to2.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedAdjustedReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months1to2 = e.target.value.split('\n');
+                        updateAdjustedField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-red-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.adjusted_ai_report?.roadmap?.months1to2 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-red-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-pink-500">
                   <h4 className="font-bold text-pink-900 mb-2">【3〜4か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.adjusted_ai_report.roadmap.months3to4.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-pink-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedAdjustedReport ? (
+                    <textarea
+                      value={editedAdjustedReport.roadmap?.months3to4.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedAdjustedReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months3to4 = e.target.value.split('\n');
+                        updateAdjustedField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-pink-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.adjusted_ai_report?.roadmap?.months3to4 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-pink-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-rose-500">
                   <h4 className="font-bold text-rose-900 mb-2">【5〜6か月目】</h4>
-                  <ul className="space-y-1">
-                    {result.adjusted_ai_report.roadmap.months5to6.map((action: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-rose-500 mt-1">•</span>
-                        <span className="text-gray-700">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {editMode && editedAdjustedReport ? (
+                    <textarea
+                      value={editedAdjustedReport.roadmap?.months5to6.join('\n') || ''}
+                      onChange={(e) => {
+                        const newRoadmap = { ...(editedAdjustedReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                        newRoadmap.months5to6 = e.target.value.split('\n');
+                        updateAdjustedField('roadmap', newRoadmap);
+                      }}
+                      className="w-full p-2 border border-rose-300 rounded text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <ul className="space-y-1">
+                      {(result.adjusted_ai_report?.roadmap?.months5to6 || []).map((action: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="text-rose-500 mt-1">•</span>
+                          <span className="text-gray-700">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
+              </div>
+              <div className="mt-4 bg-red-100 rounded-lg p-4">
+                <h4 className="font-bold text-red-900 mb-2">💡 ロードマップのポイント</h4>
+                {editMode && editedAdjustedReport ? (
+                  <textarea
+                    value={editedAdjustedReport.roadmap?.summary || ''}
+                    onChange={(e) => {
+                      const newRoadmap = { ...(editedAdjustedReport.roadmap || { months1to2: [], months3to4: [], months5to6: [], summary: '' }) };
+                      newRoadmap.summary = e.target.value;
+                      updateAdjustedField('roadmap', newRoadmap);
+                    }}
+                    className="w-full p-2 border border-red-300 rounded text-sm"
+                    rows={2}
+                  />
+                ) : (
+                  <p className="text-gray-800 text-sm">{result.adjusted_ai_report?.roadmap?.summary}</p>
+                )}
               </div>
             </div>
           )}
