@@ -219,6 +219,28 @@ export default function SurveyPage() {
 
       console.log('Success! Data:', data);
 
+      // 管理者にメール通知を送信
+try {
+  await fetch('/api/send-survey-notification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      company_name: data.company_name,
+      respondent_name: data.respondent_name,
+      respondent_email: data.respondent_email,
+      industry: data.industry,
+      revenue_scale: data.revenue_scale,
+      business_phase: data.business_phase,
+      avg_score: data.avg_score,
+      result_id: data.id,
+    }),
+  });
+  console.log('Email notification sent successfully');
+} catch (emailError) {
+  // メール送信失敗してもサーベイは完了
+  console.error('Email notification failed:', emailError);
+}
+
        // AI分析を実行
       // AI分析を実行して結果を保存
 try {
