@@ -198,13 +198,26 @@ const [editedAdjustedReport, setEditedAdjustedReport] = useState<AIReport | null
   }
 
   function handleEdit() {
-  if (result?.ai_report) {
-    setEditedOriginalReport({ ...result.ai_report });
-    if (result.adjusted_ai_report) {
-      setEditedAdjustedReport({ ...result.adjusted_ai_report });
-    }
-    setEditMode(true);
+  if (!result?.ai_report) {
+    alert('編集するレポートがありません');
+    return;
   }
+  
+  console.log('編集モード開始 - Original Report:', result.ai_report);
+  console.log('編集モード開始 - Adjusted Report:', result.adjusted_ai_report);
+  
+  // 確実に初期化
+  const originalCopy = JSON.parse(JSON.stringify(result.ai_report));
+  const adjustedCopy = result.adjusted_ai_report 
+    ? JSON.parse(JSON.stringify(result.adjusted_ai_report))
+    : null;
+  
+  setEditedOriginalReport(originalCopy);
+  setEditedAdjustedReport(adjustedCopy);
+  setEditMode(true);
+  
+  console.log('編集モード設定完了');
+}
 }
 
   function handleCancelEdit() {
@@ -820,23 +833,33 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
                 修正スコア（ヒアリング後）
               </label>
               <input
-                type="number"
-                min="1"
-                max="5"
-                value={adjustedScore ?? ''}
-                onChange={(e) => {
-  const value = e.target.value ? parseInt(e.target.value) : null;
-  if (value) {
-    setAdjustedScores(prev => ({
-      ...prev,
-      [qNum]: value
-    }));
-  } else {
-     const newScores = { ...adjustedScores };
-    delete newScores[qNum];
-    setAdjustedScores(newScores);
-  }
-}}
+  type="number"
+  min="1"
+  max="5"
+  value={adjustedScore ?? ''}
+  onChange={(e) => {
+    console.log('Score input changed:', e.target.value);
+    const value = e.target.value ? parseInt(e.target.value) : null;
+    console.log('Parsed value:', value);
+    
+    if (value && value >= 1 && value <= 5) {
+      setAdjustedScores(prev => {
+        const newScores = { ...prev, [qNum]: value };
+        console.log('Updated scores:', newScores);
+        return newScores;
+      });
+    } else if (!value) {
+      setAdjustedScores(prev => {
+        const newScores = { ...prev };
+        delete newScores[qNum];
+        console.log('Deleted score, updated scores:', newScores);
+        return newScores;
+      });
+    }
+  }}
+  placeholder={`元: ${score}`}
+  className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
+/>
                 placeholder={`元: ${score}`}
                 className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
               />
