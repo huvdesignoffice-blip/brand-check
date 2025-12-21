@@ -218,7 +218,6 @@ const [editedAdjustedReport, setEditedAdjustedReport] = useState<AIReport | null
   
   console.log('編集モード設定完了');
 }
-}
 
   function handleCancelEdit() {
   setEditedOriginalReport(null);
@@ -662,7 +661,7 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
             </div>
           )}
 
-          {/* {/* 総合スコア */}
+           {/* 総合スコア */}
 <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
   <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
   <div className="flex items-center justify-center">
@@ -860,10 +859,7 @@ const adjustedAvgScore = Object.keys(adjustedScores).length > 0
   placeholder={`元: ${score}`}
   className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
 />
-                placeholder={`元: ${score}`}
-                className="w-20 px-3 py-2 border border-orange-300 rounded-lg text-red-600 font-bold text-lg"
-              />
-              {adjustedScore && adjustedScore !== score && (
+                              {adjustedScore && adjustedScore !== score && (
                 <span className="ml-3 text-sm text-orange-600">
                   変更: {score} → <span className="font-bold text-red-600">{adjustedScore}</span>
                 </span>
