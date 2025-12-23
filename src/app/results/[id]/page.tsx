@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Image from "next/image";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 type AIReport = {
@@ -97,64 +96,59 @@ export default function ResultPage() {
   }, [params.id]);
 
   async function generateAIReport(assessmentData: SurveyResult) {
-  try {
-    setGeneratingAI(true);
+    try {
+      setGeneratingAI(true);
 
-    const response = await fetch("/api/analyze-with-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scores: [
-          assessmentData.q1_market_understanding,
-          assessmentData.q2_competitive_analysis,
-          assessmentData.q3_self_analysis,
-          assessmentData.q4_value_proposition,
-          assessmentData.q5_uniqueness,
-          assessmentData.q6_product_service,
-          assessmentData.q7_communication,
-          assessmentData.q8_inner_branding,
-          assessmentData.q9_kpi_management,
-          assessmentData.q10_results,
-          assessmentData.q11_ip_protection,
-          assessmentData.q12_growth_intent,
-        ],
-        memo: assessmentData.memo,
-        businessPhase: assessmentData.business_phase,
-        companyName: assessmentData.company_name,
-      }),
-      // タイムアウトを60秒に設定
-      signal: AbortSignal.timeout(60000),
-    });
+      const response = await fetch("/api/analyze-with-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scores: [
+            assessmentData.q1_market_understanding,
+            assessmentData.q2_competitive_analysis,
+            assessmentData.q3_self_analysis,
+            assessmentData.q4_value_proposition,
+            assessmentData.q5_uniqueness,
+            assessmentData.q6_product_service,
+            assessmentData.q7_communication,
+            assessmentData.q8_inner_branding,
+            assessmentData.q9_kpi_management,
+            assessmentData.q10_results,
+            assessmentData.q11_ip_protection,
+            assessmentData.q12_growth_intent,
+          ],
+          memo: assessmentData.memo,
+          businessPhase: assessmentData.business_phase,
+          companyName: assessmentData.company_name,
+        }),
+      });
 
-    if (!response.ok) throw new Error("AI分析に失敗しました");
+      if (!response.ok) throw new Error("AI分析に失敗しました");
 
-    const aiReport = await response.json();
+      const aiReport = await response.json();
 
-    // データベースを更新
-    const { error: updateError } = await supabase
-      .from("survey_results")
-      .update({ ai_report: aiReport })
-      .eq("id", assessmentData.id);
+      // データベースを更新
+      const { error: updateError } = await supabase
+        .from("survey_results")
+        .update({ ai_report: aiReport })
+        .eq("id", assessmentData.id);
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
 
-    // 状態を更新
-    setResult((prev) => (prev ? { ...prev, ai_report: aiReport } : null));
-  } catch (err) {
-    console.error("Error generating AI report:", err);
-    if (err instanceof Error && err.name === 'TimeoutError') {
-      alert("AI分析がタイムアウトしました。もう一度お試しください。");
-    } else {
+      // 状態を更新
+      setResult((prev) => (prev ? { ...prev, ai_report: aiReport } : null));
+    } catch (err) {
+      console.error("Error generating AI report:", err);
       alert("AI分析に失敗しました: " + (err as Error).message);
+    } finally {
+      setGeneratingAI(false);
     }
-  } finally {
-    setGeneratingAI(false);
   }
-}
 
   function handleEdit() {
     if (result?.ai_report) {
-      setEditedReport({ ...result.ai_report });
+      // 深いコピーを作成
+      setEditedReport(JSON.parse(JSON.stringify(result.ai_report)));
       setEditMode(true);
     }
   }
@@ -202,6 +196,14 @@ export default function ResultPage() {
     }
   }
 
+  function updateArrayField(field: keyof AIReport, index: number, value: string) {
+    if (editedReport && Array.isArray(editedReport[field])) {
+      const newArray = [...(editedReport[field] as string[])];
+      newArray[index] = value;
+      setEditedReport({ ...editedReport, [field]: newArray });
+    }
+  }
+
   function handlePrint() {
     window.print();
   }
@@ -226,23 +228,23 @@ export default function ResultPage() {
   }
 
   const scores = [
-  result.q1_market_understanding,
-  result.q2_competitive_analysis,
-  result.q3_self_analysis,
-  result.q4_value_proposition,
-  result.q5_uniqueness,
-  result.q6_product_service,
-  result.q7_communication,
-  result.q8_inner_branding,
-  result.q9_kpi_management,
-  result.q10_results,
-  result.q11_ip_protection,
-  result.q12_growth_intent,
-];
+    result.q1_market_understanding,
+    result.q2_competitive_analysis,
+    result.q3_self_analysis,
+    result.q4_value_proposition,
+    result.q5_uniqueness,
+    result.q6_product_service,
+    result.q7_communication,
+    result.q8_inner_branding,
+    result.q9_kpi_management,
+    result.q10_results,
+    result.q11_ip_protection,
+    result.q12_growth_intent,
+  ];
 
-const avgScore = Number(
-  result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12)
-).toFixed(1);
+  const avgScore = Number(
+    result.avg_score || (scores.reduce((a, b) => a + b, 0) / 12)
+  ).toFixed(1);
 
   const chartData = QUESTIONS.map((q) => ({
     category: q.label,
@@ -334,23 +336,8 @@ const avgScore = Number(
 
           {/* ヘッダー */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl shadow-lg p-8 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">ブランドチェック診断結果</h1>
-                <p className="text-blue-100">Brand Check Assessment Report</p>
-              </div>
-              <div className="flex-shrink-0">
-                <Image
-                  src="/variation logo_1.png"
-                  alt="HUV Design Office Logo"
-                  width={150}
-                  height={60}
-                  className="object-contain"
-                  priority
-                  style={{ width: 'auto', height: 'auto' }}
-                />
-              </div>
-            </div>
+            <h1 className="text-3xl font-bold mb-2">ブランドチェック診断結果</h1>
+            <p className="text-blue-100">Brand Check Assessment Report</p>
           </div>
 
           {/* AI生成中の表示 */}
@@ -392,19 +379,19 @@ const avgScore = Number(
 
           {/* 総合スコア */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-  <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
-  <div className="flex items-center justify-center">
-    <div className="text-center">
-      <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
-        <p className="text-6xl font-bold text-white">{Number(avgScore).toFixed(1)}</p>
-        <p className="text-xl text-blue-100">/ 5.0</p>
-      </div>
-      <p className={`text-2xl font-bold mt-4 px-6 py-2 rounded-full inline-block ${getScoreColor(Number(avgScore))}`}>
-        {getScoreLabel(Number(avgScore))}
-      </p>
-    </div>
-  </div>
-</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">総合スコア</h2>
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="inline-block bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 mb-4">
+                  <p className="text-6xl font-bold text-white">{avgScore}</p>
+                  <p className="text-xl text-blue-100">/ 5.0</p>
+                </div>
+                <p className={`text-2xl font-bold mt-4 px-6 py-2 rounded-full inline-block ${getScoreColor(Number(avgScore))}`}>
+                  {getScoreLabel(Number(avgScore))}
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* レーダーチャート */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
@@ -501,11 +488,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.contradictions?.[i] || ''}
-                            onChange={(e) => {
-                              const newContradictions = [...(editedReport?.contradictions || [])];
-                              newContradictions[i] = e.target.value;
-                              updateField('contradictions', newContradictions);
-                            }}
+                            onChange={(e) => updateArrayField('contradictions', i, e.target.value)}
                             className="flex-1 p-2 border border-gray-300 rounded"
                             rows={2}
                           />
@@ -533,11 +516,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.priorityActions?.[i] || ''}
-                            onChange={(e) => {
-                              const newActions = [...(editedReport?.priorityActions || [])];
-                              newActions[i] = e.target.value;
-                              updateField('priorityActions', newActions);
-                            }}
+                            onChange={(e) => updateArrayField('priorityActions', i, e.target.value)}
                             className="flex-1 p-2 border border-gray-300 rounded"
                             rows={2}
                           />
@@ -563,11 +542,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.strengths?.[i] || ''}
-                            onChange={(e) => {
-                              const newStrengths = [...(editedReport?.strengths || [])];
-                              newStrengths[i] = e.target.value;
-                              updateField('strengths', newStrengths);
-                            }}
+                            onChange={(e) => updateArrayField('strengths', i, e.target.value)}
                             className="flex-1 p-2 border border-gray-300 rounded"
                             rows={2}
                           />
@@ -593,11 +568,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.weaknesses?.[i] || ''}
-                            onChange={(e) => {
-                              const newWeaknesses = [...(editedReport?.weaknesses || [])];
-                              newWeaknesses[i] = e.target.value;
-                              updateField('weaknesses', newWeaknesses);
-                            }}
+                            onChange={(e) => updateArrayField('weaknesses', i, e.target.value)}
                             className="flex-1 p-2 border border-gray-300 rounded"
                             rows={2}
                           />
@@ -625,11 +596,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.recommendations?.[i] || ''}
-                            onChange={(e) => {
-                              const newRecommendations = [...(editedReport?.recommendations || [])];
-                              newRecommendations[i] = e.target.value;
-                              updateField('recommendations', newRecommendations);
-                            }}
+                            onChange={(e) => updateArrayField('recommendations', i, e.target.value)}
                             className="flex-1 p-2 border border-gray-300 rounded"
                             rows={2}
                           />
@@ -654,11 +621,7 @@ const avgScore = Number(
                         {editMode ? (
                           <textarea
                             value={editedReport?.successPath?.[i] || ''}
-                            onChange={(e) => {
-                              const newPath = [...(editedReport?.successPath || [])];
-                              newPath[i] = e.target.value;
-                              updateField('successPath', newPath);
-                            }}
+                            onChange={(e) => updateArrayField('successPath', i, e.target.value)}
                             className="w-full p-2 border border-gray-300 rounded"
                             rows={2}
                           />

@@ -1,8 +1,5 @@
 "use client";
 
-// ビルド時の静的生成をスキップ
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
@@ -11,6 +8,7 @@ type Assessment = {
   created_at: string;
   company_name: string | null;
   respondent_name: string | null;
+  respondent_email: string | null;
   industry: string | null;
   business_phase: string | null;
   avg_score: number | null;
@@ -148,7 +146,7 @@ export default function BrandCheckAdminPage() {
     }\nID: ${id}\n\nこの操作は取り消せません。`;
 
     if (!window.confirm(confirmMessage)) {
-      return; // 「いいえ」またはキャンセルが選択された場合
+      return;
     }
 
     try {
@@ -161,10 +159,7 @@ export default function BrandCheckAdminPage() {
 
       if (error) throw error;
 
-      // 成功メッセージ
       alert("データを削除しました");
-
-      // ローカルの状態を更新
       setAssessments(assessments.filter((a) => a.id !== id));
     } catch (error) {
       console.error("Error deleting result:", error);
@@ -179,6 +174,7 @@ export default function BrandCheckAdminPage() {
       "作成日時",
       "会社名",
       "回答者名",
+      "メールアドレス",
       "業界",
       "ビジネスフェーズ",
       "平均スコア"
@@ -188,6 +184,7 @@ export default function BrandCheckAdminPage() {
       new Date(a.created_at).toLocaleString("ja-JP"),
       a.company_name || "-",
       a.respondent_name || "-",
+      a.respondent_email || "-",
       a.industry || "-",
       a.business_phase || "-",
       (a.avg_score || 0).toFixed(1)
@@ -373,6 +370,7 @@ export default function BrandCheckAdminPage() {
                     </button>
                   </th>
                   <th className="p-3 text-left border">回答者名</th>
+                  <th className="p-3 text-left border">メールアドレス</th>
                   <th className="p-3 text-left border">業界</th>
                   <th className="p-3 text-left border">ビジネスフェーズ</th>
                   <th className="p-3 text-left border">
@@ -393,7 +391,7 @@ export default function BrandCheckAdminPage() {
               <tbody>
                 {filteredAssessments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-500">
+                    <td colSpan={9} className="p-8 text-center text-gray-500">
                       該当するデータがありません
                     </td>
                   </tr>
@@ -408,6 +406,9 @@ export default function BrandCheckAdminPage() {
                       </td>
                       <td className="p-3 border">
                         {assessment.respondent_name || "-"}
+                      </td>
+                      <td className="p-3 border">
+                        {assessment.respondent_email || "-"}
                       </td>
                       <td className="p-3 border">{assessment.industry || "-"}</td>
                       <td className="p-3 border">
